@@ -21,11 +21,11 @@ class ASREnhDataset(Dataset):
         data = self.df.iloc[idx]
         audio_url =  data['audio_path']
         some_answer = data['latex']
-        
+
         sp_prompt = "<|startofanalysis|><|en|><|transcribe|><|en|><|notimestamps|><|wo_itn|>"
         query = f"<audio>{audio_url}</audio>{sp_prompt}"
         audio_info = self.tokenizer.process_audio(query)
-        
+
         eos_token_id = self.tokenizer('<|endoftext|>',return_tensors='pt').input_ids[0]
         query_tokens = self.tokenizer(query, return_tensors='pt',audio_info=audio_info)
         input_ids_query =      query_tokens.input_ids[0]
@@ -40,7 +40,7 @@ class ASREnhDataset(Dataset):
         assert len(mask) == len(input_ids_query_with_answer) == len(token_type_ids_query_with_answer) == len(attention_mask_query_with_answer)
 
         return input_ids_query_with_answer, token_type_ids_query_with_answer, attention_mask_query_with_answer, mask, audio_info
-        
+
 
 def get_dataset(df, tokenizer):
 
@@ -56,19 +56,19 @@ def get_collate_function(eos_token_id):
         masks = list(masks)
         audio_infos = list(audio_infos)
         max_len = max([t.shape[-1] for t in input_ids_query_with_answers])
-        
+
         for i in range(len(input_ids_query_with_answers)):
             pad_len = max_len - input_ids_query_with_answers[i].shape[-1]
             masks[i] = torch.cat([masks[i], torch.tensor(pad_len*[False], dtype=bool)], dim=0)
             input_ids_query_with_answers[i] =      torch.cat([input_ids_query_with_answers[i], torch.tensor(pad_len*[eos_token_id], dtype=int)], dim=0)
             attention_mask_query_with_answers[i] = torch.cat([attention_mask_query_with_answers[i], torch.tensor(pad_len*[0], dtype=int)], dim=0)
             token_type_ids_query_with_answers[i] = torch.cat([token_type_ids_query_with_answers[i], torch.tensor(pad_len*[0], dtype=int)], dim=0)
-    
+
         input_ids_query_with_answers = torch.stack(input_ids_query_with_answers)
         masks = torch.stack(masks)
         attention_mask_query_with_answers = torch.stack(attention_mask_query_with_answers)
         token_type_ids_query_with_answers = torch.stack(token_type_ids_query_with_answers)
-        
+
         # return input_ids_query_with_answers, token_type_ids_query_with_answers, attention_mask_query_with_answers, masks
         return {
             'input_ids': input_ids_query_with_answers,
