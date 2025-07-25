@@ -4,6 +4,9 @@ from transformers import GPT2TokenizerFast, GPT2Model
 import re
 import math
 
+import pathlib
+
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #print(f"Using device: {device}")
@@ -18,11 +21,13 @@ def load_models_and_tokenizer():
     positional_embedding = gpt2_model.wpe.to(device)
 
     # 새로운 임베딩 로드 (필요한 경우)
+
+    weights_path = pathlib.Path(__file__).parent.resolve() / 'new_embeddings.pth'
     try:
         if device == 'cuda':
-            new_embeddings_state = torch.load('new_embeddings.pth')
+            new_embeddings_state = torch.load(weights_path)
         else:
-            new_embeddings_state = torch.load('new_embeddings.pth', map_location=torch.device('cpu'))
+            new_embeddings_state = torch.load(weights_path, map_location=torch.device('cpu'))
 
         new_vocab_size, embedding_dim = new_embeddings_state['weight'].shape
         new_embeddings = torch.nn.Embedding(new_vocab_size, embedding_dim).to(device)
@@ -50,7 +55,7 @@ def get_token_embeddings(sentence):
     tokens = tokenizer.encode(sentence, truncation=True, max_length=512)
     #print(f"Tokenized text: {tokens}")
     decoded_tokens = [tokenizer.decode([token]) for token in tokens]
-    print(f"Decoded tokens: {decoded_tokens}")
+    # print(f"Decoded tokens: {decoded_tokens}")
     
     token_ids = torch.tensor(tokens).unsqueeze(0).to(device)
     positions = torch.arange(0, token_ids.size(1)).unsqueeze(0).to(device)
