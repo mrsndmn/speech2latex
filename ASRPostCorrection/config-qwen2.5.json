@@ -1,0 +1,12 @@
+{
+      "exp_name": "asr-sentence",
+      "model_ckpt": "Qwen/Qwen2.5-0.5B",
+      "n_epochs": 5,
+      "grad_accum": 1,
+      "learning_rate": 5e-5,
+      "prompt": "This is a dialog with AI assistant.\n",
+      "num_workers": 50,
+      "batch_size": 12,
+      "ckp_iterations_step": 25000
+  }
+  

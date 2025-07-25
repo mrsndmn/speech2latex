@@ -1,0 +1,15 @@
+{
+      "exp_name": "tts-equations-mathbridge",
+      "pron_column_name": "spoken_English",
+      "latex_column_name": "equation",
+
+      "model_ckpt": "Qwen/Qwen2.5-0.5B-Instruct",
+      "n_epochs": 1,
+      "grad_accum": 1,
+      "learning_rate": 5e-5,
+      "prompt": "This is a dialog with AI assistant.\n",
+      "num_workers": 0,
+      "batch_size": 32,
+      "ckp_iterations_step": 25000
+}
+
