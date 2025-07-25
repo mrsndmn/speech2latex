@@ -7,6 +7,8 @@ import torch.nn as nn
 import numpy as np
 import pytorch_lightning as pl
 
+import datasets
+
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.optimization import Adafactor, AdafactorSchedule, get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
@@ -115,11 +117,12 @@ if __name__ == "__main__":
         config_dict = json.load(config_file)
     cfg = Config(**config_dict)
     # df = pd.read_csv(cfg.df_path, index_col=False)dummy_ex
-    df = pd.read_csv("train_ENG.csv", index_col=False)
+
+    s2l_dataset = datasets.Dataset.load_from_disk("/workspace-SR004.nfs2/d.tarasov/rsi-speech2latex/Data/trainable_split/equations_dev_new/")
 
     torch.manual_seed(1234)
 
-    tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-Audio", trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(cfg.model_ckpt, trust_remote_code=True)
 
     # use bf16
     # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-Audio", device_map="auto", trust_remote_code=True, bf16=True).eval()
@@ -128,7 +131,7 @@ if __name__ == "__main__":
     # use cpu only
     # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-Audio", device_map="cpu", trust_remote_code=True).eval()
     # use cuda device
-    model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-Audio", device_map="cpu", trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(cfg.model_ckpt, device_map="cpu", trust_remote_code=True)
     freeze(model)
     # freeze(model)
     # for p in model.lm_head.parameters():
@@ -158,11 +161,11 @@ if __name__ == "__main__":
 
 
     ### Work with data
-    train_dataset = get_dataset(df, tokenizer)
+    train_dataset = get_dataset(s2l_dataset, tokenizer)
     collate_function = get_collate_function(eos_token_id)
 
     module = Model_pl(cfg, model, train_dataset, collate_function, tokenizer)
-    trainer = pl.Trainer(devices=[2], max_epochs=cfg.n_epochs, logger = logger, accumulate_grad_batches = cfg.grad_accum)
+    trainer = pl.Trainer(max_epochs=cfg.n_epochs, logger = logger, accumulate_grad_batches = cfg.grad_accum)
     trainer.fit(module)
 
     # run()

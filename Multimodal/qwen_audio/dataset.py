@@ -9,16 +9,16 @@ from PIL import Image
 
 
 class ASREnhDataset(Dataset):
-    def __init__(self, df, tokenizer):
-        self.df = df
+    def __init__(self, s2l_dataset, tokenizer):
+        self.s2l_dataset = s2l_dataset
         self.tokenizer = tokenizer
 
     def __len__(self):
-        return len(self.df)
+        return len(self.s2l_dataset)
 
 
     def __getitem__(self, idx):
-        data = self.df.iloc[idx]
+        data = self.s2l_dataset.iloc[idx]
         audio_url =  data['audio_path']
         some_answer = data['latex']
 
@@ -42,9 +42,9 @@ class ASREnhDataset(Dataset):
         return input_ids_query_with_answer, token_type_ids_query_with_answer, attention_mask_query_with_answer, mask, audio_info
 
 
-def get_dataset(df, tokenizer):
+def get_dataset(s2l_dataset, tokenizer):
 
-    return ASREnhDataset(df, tokenizer)
+    return ASREnhDataset(s2l_dataset, tokenizer)
 
 
 def get_collate_function(eos_token_id):
