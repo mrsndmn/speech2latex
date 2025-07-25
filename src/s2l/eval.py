@@ -1,4 +1,5 @@
 from typing import List
+from tqdm import tqdm
 
 import evaluate
 
@@ -32,6 +33,19 @@ class LatexInContextMetrics:
         self.rouge1 = evaluate.load("rouge")
         self.chrf = evaluate.load("chrf")
 
+    def compute_tex_bleu(self, predictions, references):
+        # Late import for faster startup
+        # This library initializes global variables
+        from tex_bleu import texbleu
+
+        all_scores = []
+
+        for pred, ref in zip(predictions, references):
+        # for pred, ref in tqdm(zip(predictions, references)):
+            all_scores.append(texbleu(ref, pred))
+
+        return sum(all_scores) / len(all_scores)
+
     def compute(self, predictions, references):
 
         predictions_lower = [ x.lower() for x in predictions ]
@@ -54,6 +68,8 @@ class LatexInContextMetrics:
         result['rouge1'] = self.rouge1.compute(predictions=predictions, references=references)['rouge1']
         result['chrf'] = self.chrf.compute(predictions=predictions, references=references)['score'] / 100
         result['chrfpp'] = self.chrf.compute(predictions=predictions, references=references, word_order=2)['score'] / 100
+
+        result['tex_bleu'] = self.compute_tex_bleu(predictions, references)
 
         return result
 
@@ -134,6 +150,7 @@ class LatexInContextMetrics:
     def dump(self, metrics: dict):
         print("Metrics")
         print("                   Value \tValue (formulas only) \tValue (text only)")
+        print("tex_bleu           {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['tex_bleu'],                    value_furmulas=metrics.get('formulas_only_tex_bleu', 0.0),            value_text=metrics.get('text_only_tex_bleu', 0.0)))
         print("wer (l)            {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['wer'],                    value_furmulas=metrics.get('formulas_only_wer', 0.0),            value_text=metrics.get('text_only_wer', 0.0)))
         print("cer (l)            {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['cer'],                    value_furmulas=metrics.get('formulas_only_cer', 0.0),            value_text=metrics.get('text_only_cer', 0.0)))
         print("wer_lower (l)      {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['wer_lower'],              value_furmulas=metrics.get('formulas_only_wer_lower', 0.0),      value_text=metrics.get('text_only_wer_lower', 0.0)))
