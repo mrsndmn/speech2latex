@@ -8,13 +8,15 @@ import numpy as np
 import pytorch_lightning as pl
 
 import datasets
+from datasets import Audio
 
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import LoraConfig, get_peft_model, TaskType
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoProcessor, Qwen2AudioForConditionalGeneration
 from transformers.optimization import Adafactor, AdafactorSchedule, get_cosine_schedule_with_warmup, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader, Dataset
 from pytorch_lightning.loggers import CSVLogger
-from dataset import get_dataset, get_collate_function
+from qwen_audio_data_collator import DataCollatorForQwen2Audio
 
 import pandas as pd
 
@@ -49,7 +51,7 @@ class Model_pl(pl.LightningModule):
         self.cfg = cfg
         self.model = model
 
-        self.n_embeddings = model.transformer.wte.weight.shape[0]
+        self.n_embeddings = model.config.vocab_size
         # self.loss_fct = nn.CrossEntropyLoss(reduction="none", ignore_index=tokenizer.pad_token_id)
         self.loss_fct = nn.CrossEntropyLoss(reduction="none")
         self.train_dataset = train_dataset
@@ -69,30 +71,18 @@ class Model_pl(pl.LightningModule):
 
         }}
 
-
     def on_train_epoch_end(self):
         # torch.save(self.model.lm_head.state_dict() ,f"ckpts/{self.cfg.exp_name}/lm_head_state_dict.pth")
         self.model.save_pretrained(f"ckpts/{self.cfg.exp_name}/tuned-model")
         self.tokenizer.save_pretrained(f"ckpts/{self.cfg.exp_name}/tokenizer")
 
     def training_step(self, batch, batch_idx):
-        input_ids, masks, audio_infos = batch
-        for k,v in input_ids.items():
-            input_ids[k] = v.to(next(iter(self.model.parameters())).device)
-        # inputs = inputs.long()
-        labels = input_ids['input_ids'].long()
+        batch = batch.to(self.device)
 
         with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-            logits = self.model(**input_ids, audio_info = audio_infos).get("logits")[:, :-1]
+            outputs = self.model(**batch)
 
-        labels = labels[:, 1:]
-        masks = masks[:, 1:]
-
-        logits = logits[masks].contiguous()
-        labels = labels[masks].contiguous()
-
-
-        loss = self.loss_fct(logits.view(-1, self.n_embeddings), labels.view(-1)).mean()
+        loss = outputs.loss
 
         self.log("my_loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
 
@@ -120,24 +110,18 @@ if __name__ == "__main__":
 
     s2l_dataset = datasets.Dataset.load_from_disk("/workspace-SR004.nfs2/d.tarasov/rsi-speech2latex/Data/trainable_split/equations_dev_new/")
 
+    print("len dataset", len(s2l_dataset))
+
+    columns_to_leave = ['audio_path', 'sentence']
+    s2l_dataset = s2l_dataset.remove_columns(list(set(s2l_dataset.column_names) - set(columns_to_leave)))
+
     torch.manual_seed(1234)
 
-    tokenizer = AutoTokenizer.from_pretrained(cfg.model_ckpt, trust_remote_code=True)
+    processor = AutoProcessor.from_pretrained(cfg.model_ckpt, trust_remote_code=True)
 
-    # use bf16
-    # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-Audio", device_map="auto", trust_remote_code=True, bf16=True).eval()
-    # use fp16
-    # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-Audio", device_map="auto", trust_remote_code=True, fp16=True).eval()
-    # use cpu only
-    # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen-Audio", device_map="cpu", trust_remote_code=True).eval()
-    # use cuda device
-    model = AutoModelForCausalLM.from_pretrained(cfg.model_ckpt, device_map="cpu", trust_remote_code=True)
-    freeze(model)
-    # freeze(model)
-    # for p in model.lm_head.parameters():
-    #     p.requires_grad_(True)
+    s2l_dataset = s2l_dataset.cast_column('audio_path', Audio(sampling_rate=processor.feature_extractor.sampling_rate))
 
-    from peft import LoraConfig, get_peft_model, TaskType
+    model = Qwen2AudioForConditionalGeneration.from_pretrained(cfg.model_ckpt, device_map="cpu", trust_remote_code=True, torch_dtype=torch.bfloat16)
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
@@ -151,27 +135,14 @@ if __name__ == "__main__":
     )
     model = get_peft_model(model, peft_config)
 
-    # unfreeze(model)
-
-    eos_token_id = tokenizer('<|endoftext|>',return_tensors='pt').input_ids[0]
-
     os.makedirs(f"ckpts/{cfg.exp_name}", exist_ok=True)
     logger = CSVLogger("ckpts", name=cfg.exp_name)
     cfg.exp_name = os.path.join(cfg.exp_name, f'version_{logger.version}')
 
+    train_dataset = s2l_dataset
+    collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate)
 
-    ### Work with data
-    train_dataset = get_dataset(s2l_dataset, tokenizer)
-    collate_function = get_collate_function(eos_token_id)
-
-    module = Model_pl(cfg, model, train_dataset, collate_function, tokenizer)
+    module = Model_pl(cfg, model, train_dataset, collate_function, processor.tokenizer)
     trainer = pl.Trainer(max_epochs=cfg.n_epochs, logger = logger, accumulate_grad_batches = cfg.grad_accum)
     trainer.fit(module)
-
-    # run()
-
-
-
-
-
 
