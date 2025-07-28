@@ -15,7 +15,8 @@ if __name__ == "__main__":
 
     def push_to_hub(dataset_path):
         sentences_ds = DatasetDict.load_from_disk(dataset_path)
-        sentences_ds.push_to_hub('marsianin500/Speech2Latex', max_shard_size='2GB')
+        for split in sentences_ds.keys():
+            sentences_ds[split].push_to_hub('marsianin500/Speech2Latex', split=split, max_shard_size='2GB')
         return True
 
     retry_untill_success(push_to_hub, './s2l_equations_normalized')
