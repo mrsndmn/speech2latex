@@ -52,7 +52,7 @@ def test(
     tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen2.5-0.5B', padding_side="left")
 
     model.eval()
-    model = torch.compile(model, mode='reduce-overhead')
+    # model = torch.compile(model, mode='reduce-overhead')
 
     outputs = defaultdict(list)
 
@@ -102,10 +102,7 @@ if __name__ == "__main__":
     parser.add_argument('--data_type', required=True, choices=['human', 'synthetic_small', 'synthetic_full', 'mix'])
 
     parser.add_argument('--few_train_samples', type=int, default=None)
-    parser.add_argument('--val_df', type=str)
-    parser.add_argument('--few_val_samples', type=int, default=None)
     parser.add_argument('--few_test_samples', type=int, default=None)
-    parser.add_argument('--experiment_dir', type=str, required=True)
     parser.add_argument('--test_equations', action='store_true')
     parser.add_argument('--test_equations_math_speech_normalized', action='store_true')
     parser.add_argument('--test_equations_my_normalized', action='store_true')
@@ -113,9 +110,6 @@ if __name__ == "__main__":
     parser.add_argument('--test_sentences', action='store_true')
     args = parser.parse_args()
 
-
-    experiment_dir = args.experiment_dir
-    os.makedirs(experiment_dir, exist_ok=True)
 
     with open(args.config, 'r') as config_file:
         config_dict = json.load(config_file)
@@ -133,11 +127,16 @@ if __name__ == "__main__":
     ### Work with data
     collate_function = get_collate_function(tokenizer)
 
-    train_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_train')
-    test_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_test')
+    train_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_train', num_proc=32)
+    test_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_test', num_proc=32)
 
-    train_dataset = train_dataset.remove_columns(set(train_dataset.column_names) - {'pronunciation', 'latex'})
-    test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - {'pronunciation', 'latex'})
+    pron_column_name = 'whisper_text'
+    latex_column_name = args.latex_column_name
+
+    columns_to_keep = {pron_column_name, latex_column_name, 'is_tts', 'language'}
+
+    train_dataset = train_dataset.remove_columns(set(train_dataset.column_names) - columns_to_keep)
+    test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
 
 
     def filter_by_language_and_data_type(item):
@@ -157,13 +156,11 @@ if __name__ == "__main__":
     if args.few_train_samples is not None:
         train_dataset = train_dataset.select(range(args.few_train_samples))
 
-    pron_column_name = 'whisper_text'
-    latex_column_name = args.latex_column_name
 
     train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
     train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True)
 
-    module = Model_pl(cfg, len(train_loader), torch.compile(model), tokenizer)
+    module = Model_pl(cfg, len(train_loader), model, tokenizer)
 
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
     csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
@@ -201,12 +198,15 @@ if __name__ == "__main__":
     ]
 
     for test_dataset, test_split in test_splits:
-        metrics_a = test(
+        metrics = test(
             model,
             test_dataset,
             few_samples=args.few_test_samples,
         )
-        json.dump(metrics_a, open(os.path.join(results_save_dir, f'{test_split}_metrics.json'), 'w'))
+        output_file_path = os.path.join(results_save_dir, f'{test_split}_metrics.json')
+        with open(output_file_path, 'w') as f:
+            json.dump(metrics, f)
+            print(f"Metrics for {test_split} saved to {output_file_path}")
 
 
     sys.exit()

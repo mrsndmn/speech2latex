@@ -10,30 +10,28 @@ from process_formula import NormalizeFormula
 
 
 class ASRDataset(Dataset):
-    def __init__(self, df, pron_column_name='pron', latex_column_name='latex'):
-        self.df = df
+    def __init__(self, dataset, pron_column_name='pron', latex_column_name='latex'):
+        self.dataset = dataset
 
         self.pron_column_name = pron_column_name
         self.latex_column_name = latex_column_name
 
     def __len__(self):
-        return len(self.df)
+        return len(self.dataset)
 
 
     def __getitem__(self, idx):
-
-        df = self.df.iloc[idx]
-
+        item = self.dataset[idx]
         return {
-            "pron": df[self.pron_column_name],
-            "latex": df[self.latex_column_name],
+            "pron": item[self.pron_column_name],
+            "latex": item[self.latex_column_name],
         }
 
 def get_collate_function(tokenizer, process_formulas=None):
     
     user_instructions_prefix = [
         # 'Translate  transcribation to LaTex formula: '
-        'Please, give me LaTeX representation of the following formula. Wrap LaTeX with $ ... $ . Formula pronunciation: '
+        'Please, give me LaTeX representation of the following formula. Formula pronunciation: '
     ]
     
     def formulas_preprocessor(formulas_list):
