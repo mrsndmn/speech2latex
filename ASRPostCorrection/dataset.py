@@ -12,10 +12,10 @@ from process_formula import NormalizeFormula
 class ASRDataset(Dataset):
     def __init__(self, df, pron_column_name='pron', latex_column_name='latex'):
         self.df = df
-        
+
         self.pron_column_name = pron_column_name
         self.latex_column_name = latex_column_name
-        
+
     def __len__(self):
         return len(self.df)
 
@@ -23,7 +23,7 @@ class ASRDataset(Dataset):
     def __getitem__(self, idx):
 
         df = self.df.iloc[idx]
-        
+
         return {
             "pron": df[self.pron_column_name],
             "latex": df[self.latex_column_name],
