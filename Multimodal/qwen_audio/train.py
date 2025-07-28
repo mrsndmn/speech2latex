@@ -63,7 +63,7 @@ class Model_pl(pl.LightningModule):
     def configure_optimizers(self):
 
         optimizer = torch.optim.AdamW(list(self.model.parameters()), lr=self.cfg.learning_rate, weight_decay=0.01)
-        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=self.n_iters)
+        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=300, num_training_steps=self.n_iters)
         return {'optimizer': optimizer, 'lr_scheduler': {
             'scheduler': scheduler,
             'interval': 'step',
@@ -98,17 +98,21 @@ class Model_pl(pl.LightningModule):
 
 
 
+# Example:
+# python train.py --dataset_path /workspace-SR004.nfs2/d.tarasov/rsi-speech2latex/Data/trainable_split/equations_dev_new/ --config configs/config.json
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./configs/config.json')
+    parser.add_argument('--dataset_path', type=str, required=True)
     args = parser.parse_args()
     with open(args.config, 'r') as config_file:
         config_dict = json.load(config_file)
     cfg = Config(**config_dict)
     # df = pd.read_csv(cfg.df_path, index_col=False)dummy_ex
 
-    s2l_dataset = datasets.Dataset.load_from_disk("/workspace-SR004.nfs2/d.tarasov/rsi-speech2latex/Data/trainable_split/equations_dev_new/")
+    s2l_dataset = datasets.Dataset.load_from_disk(args.dataset_path)
 
     print("len dataset", len(s2l_dataset))
 
