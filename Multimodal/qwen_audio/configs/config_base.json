@@ -1,7 +1,7 @@
 {
     "dataset_path": "/workspace-SR004.nfs2/d.tarasov/speech2latex-gh/Data/trainable_split/s2l_equations_normalized/",
     "train_dataset_split": "equations_train",
-    "latex_column_name": "sentence",
+    "latex_column_name": "sentence_normalized",
     "exp_name": "qwen-audio-train",
     "model_ckpt": "Qwen/Qwen2-Audio-7B-Instruct",
     "n_epochs": 1,
