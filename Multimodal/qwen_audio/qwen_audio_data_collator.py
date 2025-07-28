@@ -1,9 +1,10 @@
 
 class DataCollatorForQwen2Audio():
 
-    def __init__(self, processor, sampling_rate):
+    def __init__(self, processor, sampling_rate, latex_column_name):
         self.processor = processor
         self.sampling_rate = sampling_rate
+        self.latex_column_name = latex_column_name
 
         self.chat_template_no_system_custom_no_role = (
             "{% set audio_count = namespace(value=0) %}"
@@ -40,7 +41,7 @@ class DataCollatorForQwen2Audio():
                 {"role": "user", "content": [
                     { "type": "audio", "audio": audio },
                 ]},
-                {"role": "assistant", "content": item['sentence']},
+                {"role": "assistant", "content": item[self.latex_column_name]},
             ]
 
             conversations.append(conversation)

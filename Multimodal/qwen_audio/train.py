@@ -105,18 +105,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./configs/config.json')
-    parser.add_argument('--dataset_path', type=str, required=True)
     args = parser.parse_args()
     with open(args.config, 'r') as config_file:
         config_dict = json.load(config_file)
     cfg = Config(**config_dict)
     # df = pd.read_csv(cfg.df_path, index_col=False)dummy_ex
 
-    s2l_dataset = datasets.Dataset.load_from_disk(args.dataset_path)
+    s2l_dataset = datasets.DatasetDict.load_from_disk(cfg.dataset_path)
+    s2l_dataset = s2l_dataset[cfg.train_dataset_split]
 
     print("len dataset", len(s2l_dataset))
 
-    columns_to_leave = ['audio_path', 'sentence']
+    columns_to_leave = ['audio_path', cfg.latex_column_name]
     s2l_dataset = s2l_dataset.remove_columns(list(set(s2l_dataset.column_names) - set(columns_to_leave)))
 
     torch.manual_seed(1234)
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     cfg.exp_name = os.path.join(cfg.exp_name, f'version_{logger.version}')
 
     train_dataset = s2l_dataset
-    collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate)
+    collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate, latex_column_name=cfg.latex_column_name)
 
     module = Model_pl(cfg, model, train_dataset, collate_function, processor.tokenizer)
     trainer = pl.Trainer(max_epochs=cfg.n_epochs, logger = logger, accumulate_grad_batches = cfg.grad_accum)
