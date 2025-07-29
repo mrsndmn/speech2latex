@@ -25,7 +25,6 @@ if __name__ == "__main__":
             # for language in ['multilingual']:
             for language in ['eng', 'ru', 'multilingual']:
                 # for data_type in ['mix']:
-                # for data_type in ['human', 'synthetic_small', 'synthetic_full', 'mix']:
                 for data_type in ['human', 'synthetic_small', 'mix']:
 
                     command = f"cd {workdir} && {env_prefix}/python train_test_qwen.py --dataset_split {dataset_split} --latex_column_name {latex_column_name} --language {language} --data_type {data_type} --config configs/config-qwen2.5.json"
