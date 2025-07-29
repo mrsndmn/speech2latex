@@ -26,3 +26,6 @@ Data/mathbridge/ed.ipynb
 
 Data/mathbridge/MathBridge_train_cleaned_normalized_train.csv
 Data/mathbridge/MathBridge_train_cleaned.csv
+s2l_equations_normalized/
+s2l_sentences_normalized/
+Data/trainable_split/s2l_original-28-07-2025/
