@@ -41,7 +41,6 @@ def test(
         test_dataset,
         pron_column_name = 'whisper_text',
         latex_column_name = 'sentence',
-        few_samples = None,
     ):
 
     DEVICE='cuda'
@@ -55,12 +54,7 @@ def test(
 
     outputs = defaultdict(list)
 
-
-    if few_samples is not None:
-        test_dataset = test_dataset.select(range(few_samples))
-
     test_dataset = ASRDataset(test_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
-
 
     # formulas normalization will be performed in batched_model_generation
     collate_function = get_collate_function(tokenizer, process_formulas=None)
@@ -142,11 +136,10 @@ if __name__ == "__main__":
 
         return True
 
-    train_dataset = train_dataset.filter(filter_by_language_and_data_type)
-
     if args.few_train_samples is not None:
         train_dataset = train_dataset.select(range(args.few_train_samples))
 
+    train_dataset = train_dataset.filter(filter_by_language_and_data_type)
 
     train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
     train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True)
@@ -156,6 +149,8 @@ if __name__ == "__main__":
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
     csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
     os.makedirs(csv_logger.save_dir, exist_ok=True)
+
+    print("output dir", csv_logger.save_dir)
 
     trainer = pl.Trainer(
         max_epochs=cfg.n_epochs,
@@ -176,13 +171,15 @@ if __name__ == "__main__":
     if args.language != 'multilingual':
         test_dataset = test_dataset.filter(lambda x: x['language'] == args.language)
 
+    if args.few_test_samples is not None:
+        test_dataset = test_dataset.select(range(args.few_test_samples))
+
     # Compute Metrics
     results_save_dir = csv_logger.save_dir
 
     outputs = test(
         model,
         test_dataset,
-        few_samples=args.few_test_samples,
         latex_column_name=latex_column_name,
     )
 
@@ -209,7 +206,7 @@ if __name__ == "__main__":
         print(f"Computing metrics for {test_split}")
 
         in_context_metrics = LatexInContextMetrics()
-        metrics_values = in_context_metrics.compute_all(evaluation_df['latex_pred'], evaluation_df['latex_true'], compute_text_only=(args.dataset_split == 'sentences'))
+        metrics_values = in_context_metrics.compute_all(evaluation_df['latex_pred'].values.tolist(), evaluation_df['latex_true'].values.tolist(), compute_text_only=(args.dataset_split == 'sentences'))
         in_context_metrics.dump(metrics_values)
 
         output_file_path = os.path.join(results_save_dir, f'{test_split}_metrics.json')
