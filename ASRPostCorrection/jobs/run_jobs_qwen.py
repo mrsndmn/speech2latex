@@ -18,14 +18,15 @@ if __name__ == "__main__":
 
     os.listdir(f'{workdir}/configs')
 
-    # for dataset_split in ['sentences', 'equations']:
-    for dataset_split in ['equations']:
-        for latex_column_name in ['sentence', 'sentence_normalized']:
-            for language in ['multilingual']:
-            # for language in ['eng', 'ru', 'multilingual']:
-                for data_type in ['mix']:
-                # for data_type in ['human', 'synthetic_small', 'mix']:
+    # for dataset_split in ['equations']:
+    for dataset_split in ['sentences', 'equations']:
+        # for latex_column_name in ['sentence', 'sentence_normalized']:
+        for latex_column_name in ['sentence_normalized']:
+            # for language in ['multilingual']:
+            for language in ['eng', 'ru', 'multilingual']:
+                # for data_type in ['mix']:
                 # for data_type in ['human', 'synthetic_small', 'synthetic_full', 'mix']:
+                for data_type in ['human', 'synthetic_small', 'mix']:
 
                     command = f"cd {workdir} && {env_prefix}/python train_test_qwen.py --dataset_split {dataset_split} --latex_column_name {latex_column_name} --language {language} --data_type {data_type} --config configs/config-qwen2.5.json"
                     print("\n\n", command)

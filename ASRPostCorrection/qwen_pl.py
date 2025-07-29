@@ -83,9 +83,9 @@ class Model_pl(pl.LightningModule):
 
     def on_train_epoch_end(self) -> None:
 
-        self.model.save_pretrained(f"ckpts/{self.cfg.exp_name}/tuned-model")
+        self.model.save_pretrained(f"{self.logger.save_dir}/tuned-model")
 
-        tokenizer_path = f"ckpts/{self.cfg.exp_name}/tokenizer"
+        tokenizer_path = f"{self.logger.save_dir}/tokenizer"
         if not os.path.exists(tokenizer_path):
             self.tokenizer.save_pretrained(tokenizer_path)
 

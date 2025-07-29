@@ -122,8 +122,6 @@ if __name__ == "__main__":
     model = AutoModelForCausalLM.from_pretrained(cfg.model_ckpt, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16)
     # model = AutoModelForCausalLM.from_pretrained("ckpts/asr-sentence/version_24/tuned-model")
 
-    os.makedirs(f"ckpts/{cfg.exp_name}", exist_ok=True)
-
     ### Work with data
     collate_function = get_collate_function(tokenizer)
 
@@ -164,6 +162,7 @@ if __name__ == "__main__":
 
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
     csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
+    os.makedirs(csv_logger.save_dir, exist_ok=True)
 
     trainer = pl.Trainer(
         max_epochs=cfg.n_epochs,
@@ -202,6 +201,7 @@ if __name__ == "__main__":
             model,
             test_dataset,
             few_samples=args.few_test_samples,
+            latex_column_name=latex_column_name,
         )
         output_file_path = os.path.join(results_save_dir, f'{test_split}_metrics.json')
         with open(output_file_path, 'w') as f:
