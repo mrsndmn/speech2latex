@@ -19,16 +19,10 @@ def evaluate(
     model,
     processor,
     test_dataset,
-    few_samples = None,
     latex_column_name = 'sentence',
 ):
-
-
     # formulas normalization will be performed in batched_model_generation
     collate_function = TestDataCollatorForQwen2Audio(processor, sampling_rate=16000, latex_column_name=latex_column_name)
-
-    if few_samples is not None:
-        test_dataset = test_dataset.select(range(few_samples))
 
     batch_size = 8
     test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=collate_function, num_workers=0, shuffle=False)
@@ -128,8 +122,3 @@ if __name__ == "__main__":
         with open(output_file_path, 'w') as f:
             json.dump(metrics, f)
             print(f"Metrics for {test_split} saved to {output_file_path}")
-
-
-
-
-

@@ -78,8 +78,8 @@ class Model_pl(pl.LightningModule):
 
     def on_train_epoch_end(self):
         # torch.save(self.model.lm_head.state_dict() ,f"ckpts/{self.cfg.exp_name}/lm_head_state_dict.pth")
-        self.model.save_pretrained(f"ckpts/{self.cfg.exp_name}/tuned-model")
-        self.tokenizer.save_pretrained(f"ckpts/{self.cfg.exp_name}/tokenizer")
+        self.model.save_pretrained(f"{self.logger.save_dir}/tuned-model")
+        self.tokenizer.save_pretrained(f"{self.logger.save_dir}/tokenizer")
 
     def training_step(self, batch, batch_idx):
         batch = batch.to(self.device)
@@ -178,7 +178,12 @@ if __name__ == "__main__":
     collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate, latex_column_name=args.latex_column_name)
 
     module = Model_pl(cfg, model, train_dataset, collate_function, processor.tokenizer)
-    trainer = pl.Trainer(max_epochs=cfg.n_epochs, logger = logger, accumulate_grad_batches = cfg.grad_accum)
+    trainer = pl.Trainer(
+        max_epochs=cfg.n_epochs,
+        logger = logger,
+        accumulate_grad_batches = cfg.grad_accum,
+        enable_checkpointing=False,
+    )
     trainer.fit(module)
 
     # Evaluation
@@ -194,6 +199,9 @@ if __name__ == "__main__":
     if args.language != 'multilingual':
         test_dataset = test_dataset.filter(lambda x: x['language'] == args.language)
 
+    if args.few_test_samples is not None:
+        test_dataset = test_dataset.select(range(args.few_test_samples))
+
     results_save_dir = os.path.join(logger.save_dir, 'results')
     os.makedirs(results_save_dir, exist_ok=True)
 
@@ -203,7 +211,6 @@ if __name__ == "__main__":
         model,
         processor,
         test_dataset,
-        few_samples=args.few_test_samples,
         latex_column_name=latex_column_name,
     )
 
@@ -214,10 +221,6 @@ if __name__ == "__main__":
     evaluation_df_mix = evaluation_df.copy()
     evaluation_df_artificial = evaluation_df[ evaluation_df['is_tts'] == 1 ].copy()
     evaluation_df_humans = evaluation_df[ evaluation_df['is_tts'] == 0 ].copy()
-
-    evaluation_df_artificial.to_csv(os.path.join(results_save_dir, 'evaluation_df_artificial.csv'), index=False)
-    evaluation_df_humans.to_csv(os.path.join(results_save_dir, 'evaluation_df_humans.csv'), index=False)
-    evaluation_df_mix.to_csv(os.path.join(results_save_dir, 'evaluation_df_mix.csv'), index=False)
 
     # Mix metrics
     metrics_splits = [
@@ -230,7 +233,7 @@ if __name__ == "__main__":
         print(f"Computing metrics for {test_split}")
 
         in_context_metrics = LatexInContextMetrics()
-        metrics_values = in_context_metrics.compute_all(evaluation_df['latex_pred'], evaluation_df['latex_true'], compute_text_only=(dataset_split == 'sentences'))
+        metrics_values = in_context_metrics.compute_all(evaluation_df['latex_pred'].values.tolist(), evaluation_df['latex_true'].values.tolist(), compute_text_only=(dataset_split == 'sentences'))
         in_context_metrics.dump(metrics_values)
 
         output_file_path = os.path.join(results_save_dir, f'{test_split}_metrics.json')
