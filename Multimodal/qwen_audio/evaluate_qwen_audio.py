@@ -32,19 +32,27 @@ def evaluate(
     if few_samples is not None:
         test_dataset = test_dataset.select(range(few_samples))
 
-    batch_size = 1
+    batch_size = 8
     test_loader = DataLoader(test_dataset, batch_size=batch_size, collate_fn=collate_function, num_workers=0, shuffle=False)
 
     outputs = defaultdict(list)
 
-    # with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
-    if True:
+    with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+    # if True:
         for batch in tqdm(test_loader):
-            # batch = batch.to('cuda')
+            batch = batch.to('cuda')
 
-            forward_output = model( batch['input_ids'], attention_mask=batch['attention_mask'], input_features=batch['input_features'], feature_attention_mask=batch['feature_attention_mask'] )
-            generated_latex = model.generate( batch['input_ids'], attention_mask=batch['attention_mask'], input_features=batch['input_features'], feature_attention_mask=batch['feature_attention_mask'], max_new_tokens=1024, )
-            generated_latex = generated_latex[:, batch['input_ids'].shape[1]:]
+            max_new_tokens = max(len(target_text) for target_text in batch['target_text'])
+
+            generated_latex = model.generate(
+                batch['input_ids'],
+                attention_mask=batch['attention_mask'],
+                input_features=batch['input_features'],
+                feature_attention_mask=batch['feature_attention_mask'],
+                max_new_tokens=max_new_tokens * 2,
+                return_dict_in_generate=True,
+            )
+            generated_latex = generated_latex.sequences[:, batch['input_ids'].shape[1]:]
 
             generated_latex = processor.batch_decode(generated_latex, skip_special_tokens=True)
             target_text = batch['target_text']
@@ -82,14 +90,12 @@ if __name__ == "__main__":
 
     model_path = f'{args.checkpoint_path}/tuned-model'
 
+    print("\n\nbase_model", args.base_model, "\n\n")
     processor = AutoProcessor.from_pretrained(args.base_model)
-    model = Qwen2AudioForConditionalGeneration.from_pretrained(args.base_model, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16)
+    model = Qwen2AudioForConditionalGeneration.from_pretrained(args.base_model, trust_remote_code=True, torch_dtype=torch.bfloat16)
 
-    # model = PeftModel.from_pretrained(model, model_path)
-
-    
-
-    # model.to('cuda')
+    model = PeftModel.from_pretrained(model, model_path)
+    model.to('cuda')
 
     test_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_test', num_proc=32)
 
@@ -107,7 +113,8 @@ if __name__ == "__main__":
     test_dataset_humans = test_dataset.filter(lambda x: x['is_tts'] == 0)
     test_dataset_mix = test_dataset
 
-    results_save_dir = f'{args.checkpoint_path}/results'
+    results_save_dir = os.path.join(args.checkpoint_path, 'results')
+    os.makedirs(results_save_dir, exist_ok=True)
 
     test_splits = [
         (test_dataset_artificial, 'artificial'),
