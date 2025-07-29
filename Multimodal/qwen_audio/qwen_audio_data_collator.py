@@ -1,9 +1,10 @@
 
 class DataCollatorForQwen2Audio():
 
-    def __init__(self, processor, sampling_rate):
+    def __init__(self, processor, sampling_rate, latex_column_name):
         self.processor = processor
         self.sampling_rate = sampling_rate
+        self.latex_column_name = latex_column_name
 
         self.chat_template_no_system_custom_no_role = (
             "{% set audio_count = namespace(value=0) %}"
@@ -40,7 +41,7 @@ class DataCollatorForQwen2Audio():
                 {"role": "user", "content": [
                     { "type": "audio", "audio": audio },
                 ]},
-                {"role": "assistant", "content": item['sentence']},
+                {"role": "assistant", "content": item[self.latex_column_name]},
             ]
 
             conversations.append(conversation)
@@ -68,6 +69,40 @@ class DataCollatorForQwen2Audio():
         model_inputs['labels'][:, :-labels_seq_len] = -100
         model_inputs['labels'][:, -labels_seq_len:][ labels_tensor['input_ids'] == self.processor.tokenizer.pad_token_id ] = -100
 
+        return model_inputs
+
+
+
+class TestDataCollatorForQwen2Audio(DataCollatorForQwen2Audio):
+
+    def __call__(self, items):
+
+        conversations = []
+        audios = []
+        target_texts = []
+
+        for item in items:
+            audio = item['audio_path']['array']
+            audios.append(audio)
+            target_texts.append(item[self.latex_column_name])
+            conversation = [
+                {"role": "system", "content": "You are a helpful assistant. Transcribe latex formula."},
+                {"role": "user", "content": [
+                    { "type": "audio", "audio": audio },
+                ]},
+            ]
+
+            conversations.append(conversation)
+
+        text = self.processor.apply_chat_template(
+            conversations,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+
+        model_inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.sampling_rate)
+
+        model_inputs['target_text'] = target_texts
         return model_inputs
 
 

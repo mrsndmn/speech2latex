@@ -1,3 +1,4 @@
+import string
 import random
 import argparse
 import json
@@ -6,6 +7,8 @@ import torch
 import torch.nn as nn
 import numpy as np
 import pytorch_lightning as pl
+from s2l.eval import LatexInContextMetrics
+
 
 import datasets
 from datasets import Audio
@@ -17,6 +20,8 @@ from transformers.optimization import Adafactor, AdafactorSchedule, get_cosine_s
 from torch.utils.data import DataLoader, Dataset
 from pytorch_lightning.loggers import CSVLogger
 from qwen_audio_data_collator import DataCollatorForQwen2Audio
+
+from evaluate_qwen_audio import evaluate
 
 import pandas as pd
 
@@ -73,8 +78,8 @@ class Model_pl(pl.LightningModule):
 
     def on_train_epoch_end(self):
         # torch.save(self.model.lm_head.state_dict() ,f"ckpts/{self.cfg.exp_name}/lm_head_state_dict.pth")
-        self.model.save_pretrained(f"ckpts/{self.cfg.exp_name}/tuned-model")
-        self.tokenizer.save_pretrained(f"ckpts/{self.cfg.exp_name}/tokenizer")
+        self.model.save_pretrained(f"{self.logger.save_dir}/tuned-model")
+        self.tokenizer.save_pretrained(f"{self.logger.save_dir}/tokenizer")
 
     def training_step(self, batch, batch_idx):
         batch = batch.to(self.device)
@@ -105,18 +110,44 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./configs/config.json')
-    parser.add_argument('--dataset_path', type=str, required=True)
+    parser.add_argument('--few_test_samples', type=int, default=None)
+    parser.add_argument('--few_train_samples', type=int, default=None)
+    parser.add_argument('--dataset_split', type=str, required=True, choices=['sentences', 'equations'])
+    parser.add_argument('--latex_column_name', type=str, required=True, choices=['sentence', 'sentence_normalized'])
+    parser.add_argument('--language', type=str, required=True, choices=['ru', 'en', 'multilingual'])
+    parser.add_argument('--data_type', type=str, required=True, choices=['synthetic_small', 'human', 'mix'])
+
     args = parser.parse_args()
+
+    dataset_split = args.dataset_split
+
     with open(args.config, 'r') as config_file:
         config_dict = json.load(config_file)
     cfg = Config(**config_dict)
     # df = pd.read_csv(cfg.df_path, index_col=False)dummy_ex
 
-    s2l_dataset = datasets.Dataset.load_from_disk(args.dataset_path)
+    s2l_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{dataset_split}_train', num_proc=32)
+
+    def filter_by_language_and_data_type(item):
+        if args.language != 'multilingual' and item['language'] != args.language:
+            return False
+
+        if args.data_type != 'mix':
+            if args.data_type == 'synthetic_small' and item['is_tts'] == 0:
+                return False
+            elif args.data_type == 'human' and item['is_tts'] == 1:
+                return False
+
+        return True
+
+    if args.few_train_samples is not None:
+        s2l_dataset = s2l_dataset.select(range(args.few_train_samples))
+
+    train_dataset = s2l_dataset.filter(filter_by_language_and_data_type)
 
     print("len dataset", len(s2l_dataset))
 
-    columns_to_leave = ['audio_path', 'sentence']
+    columns_to_leave = ['audio_path', args.latex_column_name]
     s2l_dataset = s2l_dataset.remove_columns(list(set(s2l_dataset.column_names) - set(columns_to_leave)))
 
     torch.manual_seed(1234)
@@ -139,14 +170,75 @@ if __name__ == "__main__":
     )
     model = get_peft_model(model, peft_config)
 
-    os.makedirs(f"ckpts/{cfg.exp_name}", exist_ok=True)
-    logger = CSVLogger("ckpts", name=cfg.exp_name)
-    cfg.exp_name = os.path.join(cfg.exp_name, f'version_{logger.version}')
+    random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+    logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
+    os.makedirs(logger.save_dir, exist_ok=True)
 
     train_dataset = s2l_dataset
-    collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate)
+    collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate, latex_column_name=args.latex_column_name)
 
     module = Model_pl(cfg, model, train_dataset, collate_function, processor.tokenizer)
-    trainer = pl.Trainer(max_epochs=cfg.n_epochs, logger = logger, accumulate_grad_batches = cfg.grad_accum)
+    trainer = pl.Trainer(
+        max_epochs=cfg.n_epochs,
+        logger = logger,
+        accumulate_grad_batches = cfg.grad_accum,
+        enable_checkpointing=False,
+    )
     trainer.fit(module)
+
+    # Evaluation
+    test_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{dataset_split}_test', num_proc=32)
+
+    pron_column_name = 'whisper_text'
+    latex_column_name = args.latex_column_name
+
+    columns_to_keep = {pron_column_name, latex_column_name, 'is_tts', 'language', 'audio_path'}
+
+    test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
+
+    if args.language != 'multilingual':
+        test_dataset = test_dataset.filter(lambda x: x['language'] == args.language)
+
+    if args.few_test_samples is not None:
+        test_dataset = test_dataset.select(range(args.few_test_samples))
+
+    results_save_dir = os.path.join(logger.save_dir, 'results')
+    os.makedirs(results_save_dir, exist_ok=True)
+
+    model = model.to('cuda')
+
+    outputs = evaluate(
+        model,
+        processor,
+        test_dataset,
+        latex_column_name=latex_column_name,
+    )
+
+    evaluation_df = pd.DataFrame({**outputs, 'is_tts': test_dataset['is_tts']})
+
+    evaluation_df.to_csv(os.path.join(results_save_dir, 'evaluation_generations.csv'), index=False)
+
+    evaluation_df_mix = evaluation_df.copy()
+    evaluation_df_artificial = evaluation_df[ evaluation_df['is_tts'] == 1 ].copy()
+    evaluation_df_humans = evaluation_df[ evaluation_df['is_tts'] == 0 ].copy()
+
+    # Mix metrics
+    metrics_splits = [
+        (evaluation_df_artificial, 'artificial'),
+        (evaluation_df_humans, 'humans'),
+        (evaluation_df_mix, 'mix'),
+    ]
+
+    for evaluation_df, test_split in metrics_splits:
+        print(f"Computing metrics for {test_split}")
+
+        in_context_metrics = LatexInContextMetrics()
+        metrics_values = in_context_metrics.compute_all(evaluation_df['latex_pred'].values.tolist(), evaluation_df['latex_true'].values.tolist(), compute_text_only=(dataset_split == 'sentences'))
+        in_context_metrics.dump(metrics_values)
+
+        output_file_path = os.path.join(results_save_dir, f'{test_split}_metrics.json')
+        with open(output_file_path, 'w') as f:
+            json.dump(metrics_values, f)
+            print(f"Metrics for {test_split} saved to {output_file_path}")
+
 

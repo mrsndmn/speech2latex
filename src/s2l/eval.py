@@ -150,7 +150,7 @@ class LatexInContextMetrics:
     def dump(self, metrics: dict):
         print("Metrics")
         print("                   Value \tValue (formulas only) \tValue (text only)")
-        print("tex_bleu           {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['tex_bleu'],                    value_furmulas=metrics.get('formulas_only_tex_bleu', 0.0),            value_text=metrics.get('text_only_tex_bleu', 0.0)))
+        print("tex_bleu           {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['tex_bleu'],               value_furmulas=metrics.get('formulas_only_tex_bleu', 0.0),       value_text=metrics.get('text_only_tex_bleu', 0.0)))
         print("wer (l)            {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['wer'],                    value_furmulas=metrics.get('formulas_only_wer', 0.0),            value_text=metrics.get('text_only_wer', 0.0)))
         print("cer (l)            {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['cer'],                    value_furmulas=metrics.get('formulas_only_cer', 0.0),            value_text=metrics.get('text_only_cer', 0.0)))
         print("wer_lower (l)      {value:.4f}\t{value_furmulas:.4f}\t\t{value_text:.4f}".format(value=metrics['wer_lower'],              value_furmulas=metrics.get('formulas_only_wer_lower', 0.0),      value_text=metrics.get('text_only_wer_lower', 0.0)))
