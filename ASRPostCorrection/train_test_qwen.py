@@ -42,7 +42,6 @@ def test(
         pron_column_name = 'whisper_text',
         latex_column_name = 'sentence',
         few_samples = None,
-        compute_text_only = True,
     ):
 
     DEVICE='cuda'
@@ -79,12 +78,7 @@ def test(
         outputs['latex_pred'].extend(predicted_text)
         outputs['latex_true'].extend(target_text)
 
-    in_context_metrics = LatexInContextMetrics()
-    metrics_values = in_context_metrics.compute_all(outputs['latex_pred'], outputs['latex_true'], compute_text_only=compute_text_only)
-
-    in_context_metrics.dump(metrics_values)
-
-    return metrics_values
+    return outputs
 
 
 if __name__ == "__main__":
@@ -182,84 +176,45 @@ if __name__ == "__main__":
     if args.language != 'multilingual':
         test_dataset = test_dataset.filter(lambda x: x['language'] == args.language)
 
-    test_dataset_artificial = test_dataset.filter(lambda x: x['is_tts'] == 1)
-    test_dataset_humans = test_dataset.filter(lambda x: x['is_tts'] == 0)
-    test_dataset_mix = test_dataset
-
     # Compute Metrics
     results_save_dir = csv_logger.save_dir
 
-    test_splits = [
-        (test_dataset_artificial, 'artificial'),
-        (test_dataset_humans, 'humans'),
-        (test_dataset_mix, 'mix'),
+    outputs = test(
+        model,
+        test_dataset,
+        few_samples=args.few_test_samples,
+        latex_column_name=latex_column_name,
+    )
+
+    evaluation_df = pd.DataFrame({**outputs, 'is_tts': test_dataset['is_tts']})
+
+    evaluation_df.to_csv(os.path.join(results_save_dir, 'evaluation_generations.csv'), index=False)
+
+    evaluation_df_mix = evaluation_df.copy()
+    evaluation_df_artificial = evaluation_df[ evaluation_df['is_tts'] == 1 ].copy()
+    evaluation_df_humans = evaluation_df[ evaluation_df['is_tts'] == 0 ].copy()
+
+    evaluation_df_artificial.to_csv(os.path.join(results_save_dir, 'evaluation_df_artificial.csv'), index=False)
+    evaluation_df_humans.to_csv(os.path.join(results_save_dir, 'evaluation_df_humans.csv'), index=False)
+    evaluation_df_mix.to_csv(os.path.join(results_save_dir, 'evaluation_df_mix.csv'), index=False)
+
+    # Mix metrics
+    metrics_splits = [
+        (evaluation_df_artificial, 'artificial'),
+        (evaluation_df_humans, 'humans'),
+        (evaluation_df_mix, 'mix'),
     ]
 
-    for test_dataset, test_split in test_splits:
-        metrics = test(
-            model,
-            test_dataset,
-            few_samples=args.few_test_samples,
-            latex_column_name=latex_column_name,
-        )
+    for evaluation_df, test_split in metrics_splits:
+        print(f"Computing metrics for {test_split}")
+
+        in_context_metrics = LatexInContextMetrics()
+        metrics_values = in_context_metrics.compute_all(evaluation_df['latex_pred'], evaluation_df['latex_true'], compute_text_only=(args.dataset_split == 'sentences'))
+        in_context_metrics.dump(metrics_values)
+
         output_file_path = os.path.join(results_save_dir, f'{test_split}_metrics.json')
         with open(output_file_path, 'w') as f:
-            json.dump(metrics, f)
+            json.dump(metrics_values, f)
             print(f"Metrics for {test_split} saved to {output_file_path}")
 
 
-    sys.exit()
-
-    if args.test_sentences:
-        print("Artificial test")
-        metrics_a = test(
-            model,
-            "../Data/latex_in_context_tts/final_table_latex_text_tts_humans_test-2-artificial.csv",
-            few_samples=args.few_test_samples,
-        )
-
-        print("Humans test")
-        metrics_h = test(
-            model,
-            "../Data/latex_in_context_tts/final_table_latex_text_tts_humans_test-2-humans.csv",
-            few_samples=args.few_test_samples,
-        )
-
-        with open(os.path.join(experiment_dir, 'humans_metrics.pickle'), 'wb') as f:
-            pickle.dump(metrics_h, f)
-
-        with open(os.path.join(experiment_dir, 'artificial_metrics.pickle'), 'wb') as f:
-            pickle.dump(metrics_a, f)
-
-    if args.test_equations:
-        raise NotImplementedError("Test equations not implemented")
-
-    if args.test_equations_math_speech_normalized:
-        metrics_a = test(
-            model,
-            "../MathSpeech/Experiments/s2l_equations_test_full_normalized_with_whisper.csv",
-            few_samples=args.few_test_samples,
-            pron_column_name = 'whisper_large_transcription',
-            latex_column_name = 'MathSpeech_LaTeX_result',
-            compute_text_only = False,
-        )
-
-    if args.test_equations_my_normalized:
-        metrics_a = test(
-            model,
-            "../Data/trainable_split/s2l_equations_test_normalized_en.csv",
-            few_samples=args.few_test_samples,
-            pron_column_name = 'whisper_text',
-            latex_column_name = 'formula_normalized',
-            compute_text_only = False,
-        )
-
-    if args.test_equations_unnormalized:
-        metrics_a = test(
-            model,
-            "../Data/trainable_split/s2l_equations_test_normalized_en.csv",
-            few_samples=args.few_test_samples,
-            pron_column_name = 'whisper_text',
-            latex_column_name = 'sentence',
-            compute_text_only = False,
-        )

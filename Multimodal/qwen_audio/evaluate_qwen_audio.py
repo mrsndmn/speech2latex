@@ -3,7 +3,6 @@ import os
 import json
 from collections import defaultdict
 from tqdm import tqdm
-from s2l.eval import LatexInContextMetrics
 
 
 import torch
@@ -22,7 +21,6 @@ def evaluate(
     test_dataset,
     few_samples = None,
     latex_column_name = 'sentence',
-    compute_text_only=False,
 ):
 
 
@@ -63,14 +61,7 @@ def evaluate(
             outputs['latex_pred'].extend(generated_latex)
             outputs['latex_true'].extend(target_text)
 
-
-    in_context_metrics = LatexInContextMetrics()
-    metrics_values = in_context_metrics.compute_all(outputs['latex_pred'], outputs['latex_true'], compute_text_only=compute_text_only)
-
-    in_context_metrics.dump(metrics_values)
-
-    return metrics_values
-
+    return outputs
 
 
 if __name__ == "__main__":
@@ -121,6 +112,8 @@ if __name__ == "__main__":
         (test_dataset_humans, 'humans'),
         (test_dataset_mix, 'mix'),
     ]
+
+    model.to('cuda')
 
     for test_dataset, test_split in test_splits:
         metrics = evaluate(

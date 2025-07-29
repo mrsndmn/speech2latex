@@ -54,5 +54,5 @@ if __name__ == "__main__":
                         }
                     )
 
-                    print("language", language, "data_type", data_type, "result", result)
+                    print("dataset_split", dataset_split, "latex_column_name", latex_column_name, "language", language, "data_type", data_type, "result", result)
 
