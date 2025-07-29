@@ -40,7 +40,8 @@ if __name__ == "__main__":
                             'script': script,
                             'job_desc': f'S2L: Qwen Audio FT {dataset_split} lang={language} data={data_type} #{author_name} #rnd #multimodal @mrsndmn',
                             'env_variables': {
-                                'PYTHONPATH': './:../src:/workspace-SR004.nfs2/d.tarasov/ProcessLaTeXFormulaTools/',
+                                'PYTHONPATH': '/workspace-SR004.nfs2/d.tarasov/speech2latex-gh:/workspace-SR004.nfs2/d.tarasov/ProcessLaTeXFormulaTools:./:../src:../TeXBLEU:../TeXBLEU:/workspace-SR004.nfs2/d.tarasov/speech2latex-gh/src:../TeXBLEU:/workspace-SR004.nfs2/d.tarasov/speech2latex-gh/src:/workspace-SR004.nfs2/d.tarasov/speech2latex-gh/TeXBLEU',
+                                'HF_HOME': '/workspace-SR004.nfs2/.cache/huggingface',
                             },
                             'instance_type': 'a100.1gpu',
                             'region': extra_options['region'],
