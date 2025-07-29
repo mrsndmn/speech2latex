@@ -136,7 +136,6 @@ if __name__ == "__main__":
     train_dataset = train_dataset.remove_columns(set(train_dataset.column_names) - columns_to_keep)
     test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
 
-
     def filter_by_language_and_data_type(item):
         if args.language != 'multilingual' and item['language'] != args.language:
             return False
