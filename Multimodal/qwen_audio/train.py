@@ -114,7 +114,7 @@ if __name__ == "__main__":
     parser.add_argument('--few_train_samples', type=int, default=None)
     parser.add_argument('--dataset_split', type=str, required=True, choices=['sentences', 'equations'])
     parser.add_argument('--latex_column_name', type=str, required=True, choices=['sentence', 'sentence_normalized'])
-    parser.add_argument('--language', type=str, required=True, choices=['ru', 'en', 'multilingual'])
+    parser.add_argument('--language', type=str, required=True, choices=['ru', 'eng', 'multilingual'])
     parser.add_argument('--data_type', type=str, required=True, choices=['synthetic_small', 'human', 'mix'])
 
     args = parser.parse_args()
