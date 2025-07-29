@@ -72,3 +72,37 @@ class DataCollatorForQwen2Audio():
         return model_inputs
 
 
+
+class TestDataCollatorForQwen2Audio(DataCollatorForQwen2Audio):
+
+    def __call__(self, items):
+
+        conversations = []
+        audios = []
+        target_texts = []
+
+        for item in items:
+            audio = item['audio_path']['array']
+            audios.append(audio)
+            target_texts.append(item[self.latex_column_name])
+            conversation = [
+                {"role": "system", "content": "You are a helpful assistant. Transcribe latex formula."},
+                {"role": "user", "content": [
+                    { "type": "audio", "audio": audio },
+                ]},
+            ]
+
+            conversations.append(conversation)
+
+        text = self.processor.apply_chat_template(
+            conversations,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+
+        model_inputs = self.processor(text=text, audios=audios, return_tensors="pt", padding=True, sampling_rate=self.sampling_rate)
+
+        model_inputs['target_text'] = target_texts
+        return model_inputs
+
+
