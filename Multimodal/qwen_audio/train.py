@@ -91,10 +91,6 @@ class Model_pl(pl.LightningModule):
 
         self.log("my_loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
 
-        if batch_idx % self.cfg.ckp_iterations_step == 0 and self.global_rank == 0:
-            os.makedirs(f"ckpts/{self.cfg.exp_name}/{batch_idx}", exist_ok=True)
-            self.model.save_pretrained(f"ckpts/{self.cfg.exp_name}/{batch_idx}/tuned-model")
-
         return loss
 
 
@@ -160,8 +156,7 @@ if __name__ == "__main__":
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
-        # target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'fc_out', 'gate_proj', 'up_proj', 'down_proj'],
-        target_modules=["c_attn", "c_proj", "w1", "w2", "wte", "lm_head", "query", "key", "value", "out", "proj", "audio_bos_eos_token"],
+        target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'gate_proj', 'up_proj', 'down_proj', 'lm_head', 'linear'],
         inference_mode=False,
         r=8,          # Размер ранга
         lora_alpha=16, # Коэффициент увеличения
@@ -170,8 +165,10 @@ if __name__ == "__main__":
     )
     model = get_peft_model(model, peft_config)
 
+    print("Num trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
+
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-    logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
+    logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}/{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
     os.makedirs(logger.save_dir, exist_ok=True)
 
     train_dataset = s2l_dataset
