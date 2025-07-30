@@ -95,6 +95,7 @@ class Model_pl(pl.LightningModule):
 
 
     def train_dataloader(self):
+        print("Batch size:", self.cfg.batch_size)
         return DataLoader(self.train_dataset, batch_size=self.cfg.batch_size, collate_fn=self.collate_function, num_workers = self.cfg.num_workers, shuffle = True)
 
 
@@ -157,6 +158,8 @@ if __name__ == "__main__":
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'gate_proj', 'up_proj', 'down_proj', 'lm_head', 'linear'],
+        # exclude_modules=['audio_tower'],
+        # exclude_modules=r'.*audio_tower.*',
         inference_mode=False,
         r=8,          # Размер ранга
         lora_alpha=16, # Коэффициент увеличения
@@ -164,12 +167,15 @@ if __name__ == "__main__":
         bias="none",
     )
     model = get_peft_model(model, peft_config)
+    print("model", model)
+    # model = torch.compile(model, dynamic=True, )
 
     print("Num trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
     logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}/{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
     os.makedirs(logger.save_dir, exist_ok=True)
+    print("Logger save dir:", logger.save_dir)
 
     train_dataset = s2l_dataset
     collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate, latex_column_name=args.latex_column_name)
@@ -180,6 +186,7 @@ if __name__ == "__main__":
         logger = logger,
         accumulate_grad_batches = cfg.grad_accum,
         enable_checkpointing=False,
+        gradient_clip_val=1.0,
     )
     trainer.fit(module)
 
