@@ -203,7 +203,7 @@ def build_s2l_equations_table(experiments):
                 value = get_metric_value(metrics, metric)
                 row.append(f"{value:.4f}")
 
-            table_data.append(row)
+        table_data.append(row)
 
     # Sort by dataset_split, language, data_type
 
@@ -212,6 +212,77 @@ def build_s2l_equations_table(experiments):
     languages_order = [ 'multilingual', 'eng', 'ru' ]
 
     table_data.sort(key=lambda x: (models_order.index(x[0]), train_split_order.index(x[1]), languages_order.index(x[2])))
+
+    # Generate LaTeX table
+    # breakpoint()
+    latex_table = tabulate(
+        table_data,
+        headers=headers,
+        tablefmt='latex',
+        floatfmt='.4f',
+        numalign='right'
+    )
+
+    return latex_table
+
+
+def build_s2l_sentences_table(experiments):
+
+    metric_split_types = ['humans', 'artificial']
+    # metric_split_types = ['mix']
+
+    metrics_to_show = [
+        'cer_lower', 'text_only_cer_lower', 'formulas_only_cer_lower', 'formulas_only_tex_bleu'
+    ]
+
+    metrics_columns = []
+    for metric_split_type in metric_split_types:
+        for metric in metrics_to_show:
+            metric_name = metric
+            if metric_name.startswith('text_only'):
+                metric_name = metric_name.removeprefix('text_only_')
+                metric_name = metric_name + '(Txt)'
+            elif metric_name.startswith('formulas_only'):
+                metric_name = metric_name.removeprefix('formulas_only_')
+                metric_name = metric_name + '(Eq)'
+
+            metrics_columns.append(f"{metric_split_type[:1]}_{metric_name}")
+
+    # Prepare table data
+    table_data = []
+    # headers = ['Dataset', 'Column', 'Language', 'Data Type', 'Hash'] + [m.upper() for m in metrics_columns]
+    headers = ['Model', 'Train', 'Hash' ] + [m.upper() for m in metrics_columns]
+
+    for exp in experiments:
+
+        row = [
+            exp['properties']['model_name'],
+            exp['properties']['data_type'],
+            # exp['properties']['language'],
+            exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
+        ]
+
+        for metric_split_type in metric_split_types:
+            if metric_split_type not in exp['metrics']:
+                raise ValueError(f"Metric {metric_split_type} not found in {exp['properties']['full_name']}")
+
+            metrics = exp['metrics'][metric_split_type]
+
+            # row.append(metric_split_type)
+
+            # Add metric values
+            for metric in metrics_to_show:
+                value = get_metric_value(metrics, metric)
+                row.append(f"{value:.4f}")
+
+        table_data.append(row)
+
+    # Sort by dataset_split, language, data_type
+
+    models_order = sorted(set([x[0] for x in table_data]))
+    train_split_order = [ 'mix', 'human', 'synthetic-small' ]
+
+    table_data.sort(key=lambda x: (models_order.index(x[0]), train_split_order.index(x[1])))
 
     # Generate LaTeX table
     # breakpoint()
@@ -283,6 +354,11 @@ def main():
 
     s2l_equations_table = build_s2l_equations_table(copy.deepcopy(equations_experiments))
     print(s2l_equations_table)
+
+    text_only_cer_lower_table = build_s2l_sentences_table(copy.deepcopy(sentences_experiments))
+    print(text_only_cer_lower_table)
+
+    breakpoint()
 
     return
 
