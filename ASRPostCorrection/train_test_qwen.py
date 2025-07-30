@@ -38,6 +38,7 @@ from qwen_pl import Model_pl, Config
 
 def test(
         model,
+        tokenizer,
         test_dataset,
         pron_column_name = 'whisper_text',
         latex_column_name = 'sentence',
@@ -47,7 +48,7 @@ def test(
 
     torch.set_default_dtype(torch.bfloat16)
 
-    tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen2.5-0.5B', padding_side="left")
+    assert tokenizer.padding_side == 'left'
 
     model.eval()
     # model = torch.compile(model, mode='reduce-overhead')
@@ -147,7 +148,7 @@ if __name__ == "__main__":
     module = Model_pl(cfg, len(train_loader), model, tokenizer)
 
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-    csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
+    csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}/{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
     os.makedirs(csv_logger.save_dir, exist_ok=True)
 
     print("output dir", csv_logger.save_dir)
@@ -179,6 +180,7 @@ if __name__ == "__main__":
 
     outputs = test(
         model,
+        tokenizer,
         test_dataset,
         latex_column_name=latex_column_name,
     )
@@ -190,10 +192,6 @@ if __name__ == "__main__":
     evaluation_df_mix = evaluation_df.copy()
     evaluation_df_artificial = evaluation_df[ evaluation_df['is_tts'] == 1 ].copy()
     evaluation_df_humans = evaluation_df[ evaluation_df['is_tts'] == 0 ].copy()
-
-    evaluation_df_artificial.to_csv(os.path.join(results_save_dir, 'evaluation_df_artificial.csv'), index=False)
-    evaluation_df_humans.to_csv(os.path.join(results_save_dir, 'evaluation_df_humans.csv'), index=False)
-    evaluation_df_mix.to_csv(os.path.join(results_save_dir, 'evaluation_df_mix.csv'), index=False)
 
     # Mix metrics
     metrics_splits = [
