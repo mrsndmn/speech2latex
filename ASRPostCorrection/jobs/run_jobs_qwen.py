@@ -20,6 +20,8 @@ if __name__ == "__main__":
     config_files = [f for f in config_files if f.endswith('.json')]
 
     for config_file in config_files:
+        # if config_file == 'config-qwen2.5.json':
+        #     continue
 
         # for dataset_split in ['equations']:
         for dataset_split in ['sentences', 'equations']:
@@ -42,7 +44,7 @@ if __name__ == "__main__":
                         result = client.run_job(
                             payload={
                                 'script': command,
-                                'job_desc': f'S2L: {config_file.split(".")[0]} {dataset_split} lang={language} data={data_type} #{author_name} #rnd #multimodal @mrsndmn',
+                                'job_desc': f'S2L: {config_file.removesuffix(".json")} {dataset_split} lang={language} data={data_type} #{author_name} #rnd #multimodal @mrsndmn',
                                 'env_variables': {
                                     'PYTHONPATH': './:../src:/workspace-SR004.nfs2/d.tarasov/ProcessLaTeXFormulaTools/:../TeXBLEU',
                                     'HF_HOME': '/workspace-SR004.nfs2/.cache/huggingface',

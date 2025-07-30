@@ -4,6 +4,7 @@ Script to aggregate experiment results from ASRPostCorrection/ckpts folder.
 Sorts experiments by properties and generates LaTeX tables.
 """
 
+import copy
 import os
 import json
 import re
@@ -12,7 +13,7 @@ from typing import Dict, List, Any
 from tabulate import tabulate
 
 
-def parse_experiment_name(name: str) -> Dict[str, str]:
+def parse_experiment_name(model_name: str, name: str) -> Dict[str, str]:
     """
     Parse experiment directory name to extract properties.
 
@@ -22,8 +23,10 @@ def parse_experiment_name(name: str) -> Dict[str, str]:
     name = name.replace('sentence_normalized', 'sentence-norm')
     name = name.replace('synthetic_small', 'synthetic-small')
 
+    exp_name = name
+
     # Remove the base model name and hash
-    parts = name.replace('asr-normalized-Qwen2.5-0.5B_', '').split('_')
+    parts = exp_name.split('_')
 
     if len(parts) >= 4:
         dataset_split = parts[0]  # equations or sentences
@@ -33,6 +36,7 @@ def parse_experiment_name(name: str) -> Dict[str, str]:
         hash_id = '_'.join(parts[4:]) if len(parts) > 4 else ''
 
         return {
+            'model_name': model_name,
             'dataset_split': dataset_split,
             'column_type': column_type,
             'language': language,
@@ -60,6 +64,8 @@ def load_metrics(ckpt_dir: str) -> Dict[str, Dict[str, float]]:
     metrics = {}
     metric_files = ['artificial_metrics.json', 'humans_metrics.json', 'mix_metrics.json']
 
+    broken_exp = False
+
     for metric_file in metric_files:
         file_path = os.path.join(ckpt_dir, metric_file)
         if os.path.exists(file_path):
@@ -71,6 +77,12 @@ def load_metrics(ckpt_dir: str) -> Dict[str, Dict[str, float]]:
                     metrics[split_name] = data
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Warning: Could not load {file_path}: {e}")
+        else:
+            print(f"Warning: Could not load {file_path}: File not found")
+            broken_exp = True
+
+    if broken_exp:
+        return None
 
     return metrics
 
@@ -93,10 +105,11 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
     #     'wer', 'cer', 'bleu', 'sacrebleu', 'meteor', 'rouge1', 'chrf', 'tex_bleu'
     # ]
 
-    metric_split_types = ['artificial', 'humans', 'mix']
+    # metric_split_types = ['artificial', 'humans', 'mix']
+    metric_split_types = [ 'mix' ]
 
     metrics_to_show = [
-        'cer', 'cer_lower', 'tex_bleu'
+        'cer_lower', 'tex_bleu'
     ]
 
     metrics_columns = []
@@ -113,18 +126,19 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
             # breakpoint()
             continue
 
+        row = [
+            exp['properties']['dataset_split'],
+            exp['properties']['column_type'],
+            exp['properties']['language'],
+            exp['properties']['data_type'],
+            exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
+        ]
+
         for metric_split_type in metric_split_types:
-            # if metric_split_type not in exp['metrics']:
-            #     continue
+            if metric_split_type not in exp['metrics']:
+                raise ValueError(f"Metric {metric_split_type} not found in {exp['properties']['full_name']}")
 
             metrics = exp['metrics'][metric_split_type]
-            row = [
-                exp['properties']['dataset_split'],
-                exp['properties']['column_type'],
-                exp['properties']['language'],
-                exp['properties']['data_type'],
-                exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
-            ]
 
             # Add metric values
             for metric in metrics_to_show:
@@ -137,7 +151,70 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
     table_data.sort(key=lambda x: (x[0], x[2], x[3]))
 
     # Generate LaTeX table
-    breakpoint()
+    # breakpoint()
+    latex_table = tabulate(
+        table_data,
+        headers=headers,
+        tablefmt='latex',
+        floatfmt='.4f',
+        numalign='right'
+    )
+
+    return latex_table
+
+def build_s2l_equations_table(experiments):
+
+    metric_split_types = ['mix', 'humans', 'artificial']
+    # metric_split_types = ['mix']
+
+    metrics_to_show = [
+        'cer_lower', 'tex_bleu'
+    ]
+
+    metrics_columns = []
+    for metric_split_type in metric_split_types:
+        for metric in metrics_to_show:
+            metrics_columns.append(f"{metric_split_type[:1]}_{metric}")
+
+    # Prepare table data
+    table_data = []
+    # headers = ['Dataset', 'Column', 'Language', 'Data Type', 'Hash'] + [m.upper() for m in metrics_columns]
+    headers = ['Model', 'Train', 'Language', 'Hash' ] + [m.upper() for m in metrics_columns]
+
+    for exp in experiments:
+
+        row = [
+            exp['properties']['model_name'],
+            exp['properties']['data_type'],
+            exp['properties']['language'],
+            exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
+        ]
+
+        for metric_split_type in metric_split_types:
+            if metric_split_type not in exp['metrics']:
+                raise ValueError(f"Metric {metric_split_type} not found in {exp['properties']['full_name']}")
+
+            metrics = exp['metrics'][metric_split_type]
+
+            # row.append(metric_split_type)
+
+            # Add metric values
+            for metric in metrics_to_show:
+                value = get_metric_value(metrics, metric)
+                row.append(f"{value:.4f}")
+
+            table_data.append(row)
+
+    # Sort by dataset_split, language, data_type
+
+    models_order = sorted(set([x[0] for x in table_data]))
+    train_split_order = [ 'mix', 'human', 'synthetic-small' ]
+    languages_order = [ 'multilingual', 'eng', 'ru' ]
+
+    table_data.sort(key=lambda x: (models_order.index(x[0]), train_split_order.index(x[1]), languages_order.index(x[2])))
+
+    # Generate LaTeX table
+    # breakpoint()
     latex_table = tabulate(
         table_data,
         headers=headers,
@@ -149,8 +226,13 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
     return latex_table
 
 
+
+
 def main():
     # Path to the checkpoints directory
+
+    # import sys
+    # ckpts_dir = sys.argv[1]
     ckpts_dir = "./ckpts"
 
     if not os.path.exists(ckpts_dir):
@@ -160,11 +242,20 @@ def main():
     # Collect all experiment directories
     experiments = []
 
-    for item in os.listdir(ckpts_dir):
-        item_path = os.path.join(ckpts_dir, item)
-        if os.path.isdir(item_path) and item.startswith('asr-normalized-Qwen2.5-0.5B_'):
+    for model_name in os.listdir(ckpts_dir):
+        model_experiments = os.path.join(ckpts_dir, model_name)
+        if not os.path.isdir(model_experiments):
+            continue
+
+        model_name = model_name.replace('asr-normalized-', '')
+
+        for item in os.listdir(model_experiments):
+            item_path = os.path.join(model_experiments, item)
+            if not os.path.isdir(item_path):
+                continue
+
             # Parse experiment properties
-            properties = parse_experiment_name(item)
+            properties = parse_experiment_name(model_name, item)
 
             # Load metrics
             metrics = load_metrics(item_path)
@@ -176,13 +267,24 @@ def main():
                     'path': item_path
                 })
 
-    print(f"Found {len(experiments)} experiments with metrics")
+    print(f"Found {len(experiments)} experiments with full metrics")
 
     # Group experiments by properties for better organization
-    grouped_experiments = defaultdict(list)
-    for exp in experiments:
-        key = (exp['properties']['dataset_split'], exp['properties']['language'])
-        grouped_experiments[key].append(exp)
+    # grouped_experiments = defaultdict(list)
+    # for exp in experiments:
+    #     key = (exp['properties']['dataset_split'], exp['properties']['language'])
+    #     grouped_experiments[key].append(exp)
+
+    # S2L Equations tables
+
+    # Mix train for different languages
+    equations_experiments = [exp for exp in experiments if exp['properties']['dataset_split'] == 'equations']
+    sentences_experiments = [exp for exp in experiments if exp['properties']['dataset_split'] == 'sentences']
+
+    s2l_equations_table = build_s2l_equations_table(copy.deepcopy(equations_experiments))
+    print(s2l_equations_table)
+
+    return
 
     # Generate tables for each split type
     split_types = ['mix', 'human', 'synthetic-small']
