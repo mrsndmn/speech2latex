@@ -20,8 +20,8 @@ if __name__ == "__main__":
     config_files = [f for f in config_files if f.endswith('.json')]
 
     for config_file in config_files:
-        # if config_file == 'config-qwen2.5.json':
-        #     continue
+        if config_file != 'config-qwen2.5-1.5B.json':
+            continue
 
         # for dataset_split in ['equations']:
         for dataset_split in ['sentences', 'equations']:
