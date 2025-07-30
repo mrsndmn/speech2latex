@@ -34,7 +34,7 @@ if __name__ == "__main__":
     while True:
         ok = False
         try:
-            dataset_filtered.push_to_hub('marsianin500/Speech2Latex', split='equations_mathbridge_clean')
+            dataset_filtered.push_to_hub('marsianin500/Speech2Latex', split='equations_mathbridge_clean', max_shard_size='5GB')
             ok = True
         except Exception as e:
             print(e)
