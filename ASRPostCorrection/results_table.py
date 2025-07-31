@@ -208,8 +208,8 @@ def build_s2l_equations_table(experiments):
     # Sort by dataset_split, language, data_type
 
     models_order = sorted(set([x[0] for x in table_data]))
-    train_split_order = [ 'mix', 'human', 'synthetic-small' ]
-    languages_order = [ 'multilingual', 'eng', 'ru' ]
+    train_split_order = [ 'mix', 'human', 'synthetic-small', '-' ]
+    languages_order = [ 'multilingual', 'eng', 'ru', ]
 
     table_data.sort(key=lambda x: (models_order.index(x[0]), train_split_order.index(x[1]), languages_order.index(x[2])))
 
@@ -354,6 +354,20 @@ def main():
 
     # Mix train for different languages
     equations_experiments = [exp for exp in experiments if exp['properties']['dataset_split'] == 'equations']
+
+    mathspeech_experiment = {
+        'properties': {
+            'model_name': 'MathSpeech',
+            'data_type': '-',
+            'language': 'eng',
+            'hash_id': '',
+        },
+        'metrics': load_metrics('../MathSpeech/Experiments'),
+        'path': ''
+    }
+
+    equations_experiments.append(mathspeech_experiment)
+
     sentences_experiments = [exp for exp in experiments if exp['properties']['dataset_split'] == 'sentences']
 
     s2l_equations_table = build_s2l_equations_table(copy.deepcopy(equations_experiments))

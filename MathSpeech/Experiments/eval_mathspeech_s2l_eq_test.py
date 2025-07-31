@@ -68,7 +68,7 @@ if __name__ == "__main__":
     metrics_values = in_context_metrics.compute_all(df_human[latex_pred_column].values.tolist(), df_human[latex_true_column].values.tolist(), compute_text_only=False, compute_formulas_only=False)
     print("\n\nHuman Metrics")
     in_context_metrics.dump(metrics_values)
-    with open("human_metrics.json", 'w') as f:
+    with open("humans_metrics.json", 'w') as f:
         json.dump(metrics_values, f)
 
     in_context_metrics = LatexInContextMetrics()
