@@ -32,3 +32,4 @@ Data/trainable_split/s2l_original-28-07-2025/
 Data/mathbridge/MathBridge_train_cleaned_normalized_train_dataset/
 Data/mathbridge/mathbridge_cleaned_tts_wavs
 s2l_*_normalized_dirty
+MathSpeech_whisper_transcribed_normalized

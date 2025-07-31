@@ -27,8 +27,8 @@ class ASRDataset(Dataset):
             "latex": item[self.latex_column_name],
         }
 
-def get_collate_function(tokenizer, process_formulas=None):
-    
+def get_collate_function(tokenizer, process_formulas=None, latex_column='latex', whisper_column='pron'):
+
     user_instructions_prefix = [
         # 'Translate  transcribation to LaTex formula: '
         'Please, give me LaTeX representation of the following formula. Formula pronunciation: '
@@ -44,10 +44,10 @@ def get_collate_function(tokenizer, process_formulas=None):
         all_chats = []
         all_chats_no_assistant_answer = []
         
-        latex_processed = formulas_preprocessor([ item['latex'] for item in dataset_items ])
+        latex_processed = formulas_preprocessor([ item[latex_column] for item in dataset_items ])
         
         for i, dataset_item in enumerate(dataset_items):
-            pronunciation = dataset_item['pron']
+            pronunciation = dataset_item[whisper_column]
             latex = latex_processed[i]
 
             user_instruction_prefix = random.choice(user_instructions_prefix)
