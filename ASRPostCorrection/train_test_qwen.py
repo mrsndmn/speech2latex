@@ -110,6 +110,19 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(cfg.model_ckpt, padding_side="left")
     model = AutoModelForCausalLM.from_pretrained(cfg.model_ckpt, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16)
     # model = AutoModelForCausalLM.from_pretrained("ckpts/asr-sentence/version_24/tuned-model")
+    model_config = model.config
+
+    if hasattr(cfg, 'lora_r') and cfg.lora_r is not None:
+        from peft import LoraConfig, get_peft_model
+        lora_config = LoraConfig(
+            r=cfg.lora_r,
+            lora_alpha=cfg.lora_alpha,
+            # target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "down_proj", "up_proj"],
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        )
+
+        model = get_peft_model(model, lora_config)
+        print("model", model)
 
     ### Work with data
     collate_function = get_collate_function(tokenizer)
@@ -165,7 +178,7 @@ if __name__ == "__main__":
     train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
     train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True)
 
-    module = Model_pl(cfg, len(train_loader), model, tokenizer)
+    module = Model_pl(cfg, len(train_loader), model, model_config, tokenizer)
 
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
     csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}/{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")

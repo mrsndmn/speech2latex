@@ -32,20 +32,28 @@ if __name__ == "__main__":
         if config_file == 'config-qwen2.5-1.5B.json':
             continue
 
+        if config_file != 'config-qwen2.5-7B.json':
+            continue
 
-        for dataset_split in ['equations']:
-        # for dataset_split in ['sentences', 'equations']:
+        # for dataset_split in ['equations']:
+        for dataset_split in ['sentences', 'equations']:
             # for latex_column_name in ['sentence', 'sentence_normalized']:
             for latex_column_name in ['sentence_normalized']:
-                for language in ['multilingual']:
-                # for language in ['eng', 'ru', 'multilingual']:
+                # for language in ['multilingual']:
+                for language in ['eng', 'ru', 'multilingual']:
                     # for data_type in ['mix']:
 
                     if dataset_split == 'sentences' and (language == 'ru' or language == 'multilingual'):
                         continue
 
-                    for data_type in ['mix_full']:
-                    # for data_type in ['human', 'synthetic_small', 'mix']:
+                    # for data_type in ['mix_full']:
+                    for data_type in ['human', 'synthetic_small', 'mix', 'mix_full']:
+
+                        if data_type == 'mix_full':
+                            if dataset_split != 'equations':
+                                continue
+                            if language != 'multilingual':
+                                continue
 
                         command = f"cd {workdir} && {env_prefix}/python train_test_qwen.py --dataset_split {dataset_split} --latex_column_name {latex_column_name} --language {language} --data_type {data_type} --config configs/{config_file}"
                         print("\n\n", command)

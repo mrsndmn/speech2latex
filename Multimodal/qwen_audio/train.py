@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
-        target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'gate_proj', 'up_proj', 'down_proj', 'lm_head', 'linear'],
+        target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'gate_proj', 'up_proj', 'down_proj'],
         # exclude_modules=['audio_tower'],
         # exclude_modules=r'.*audio_tower.*',
         inference_mode=False,
