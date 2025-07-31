@@ -114,6 +114,9 @@ if __name__ == "__main__":
     ### Work with data
     collate_function = get_collate_function(tokenizer)
 
+    train_dataset_split = args.dataset_split
+    test_dataset_split = args.dataset_split
+
     train_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_train', num_proc=32)
     test_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_test', num_proc=32)
 
@@ -125,12 +128,26 @@ if __name__ == "__main__":
     train_dataset = train_dataset.remove_columns(set(train_dataset.column_names) - columns_to_keep)
     test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
 
+    if args.data_type == 'synthetic_full':
+        big_synthetic_dataset = datasets.Dataset.load_from_disk('../Data/mathbridge/MathBridge_train_cleaned_normalized_train_dataset/')
+        big_synthetic_dataset = big_synthetic_dataset.add_column('is_tts', [1] * len(big_synthetic_dataset))
+        big_synthetic_dataset = big_synthetic_dataset.add_column('language', ['eng'] * len(big_synthetic_dataset))
+
+        big_synthetic_dataset = big_synthetic_dataset.remove_columns(set(big_synthetic_dataset.column_names) - columns_to_keep)
+
+        print("Adding synthetic dataset to train dataset")
+        print("Train dataset size", len(train_dataset))
+        print("Synthetic dataset size", len(big_synthetic_dataset))
+
+        train_dataset = datasets.concatenate_datasets([train_dataset, big_synthetic_dataset])
+        print("Concatenated dataset size", len(train_dataset))
+
     def filter_by_language_and_data_type(item):
         if args.language != 'multilingual' and item['language'] != args.language:
             return False
 
         if args.data_type != 'mix':
-            if args.data_type == 'synthetic_small' and item['is_tts'] == 0:
+            if 'synthetic' in args.data_type and item['is_tts'] == 0:
                 return False
             elif args.data_type == 'human' and item['is_tts'] == 1:
                 return False
@@ -141,6 +158,9 @@ if __name__ == "__main__":
         train_dataset = train_dataset.select(range(args.few_train_samples))
 
     train_dataset = train_dataset.filter(filter_by_language_and_data_type)
+
+    print("Train dataset size", len(train_dataset))
+    print("Test dataset size", len(test_dataset))
 
     train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
     train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True)
