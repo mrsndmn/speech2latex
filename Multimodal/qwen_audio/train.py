@@ -139,10 +139,11 @@ if __name__ == "__main__":
 
         return True
 
+
+    s2l_dataset = s2l_dataset.filter(filter_by_language_and_data_type)
+
     if args.few_train_samples is not None:
         s2l_dataset = s2l_dataset.select(range(args.few_train_samples))
-
-    train_dataset = s2l_dataset.filter(filter_by_language_and_data_type)
 
     print("len dataset", len(s2l_dataset))
 
@@ -161,7 +162,7 @@ if __name__ == "__main__":
         task_type=TaskType.CAUSAL_LM,
         target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'gate_proj', 'up_proj', 'down_proj'],
         # exclude_modules=['audio_tower'],
-        # exclude_modules=r'.*audio_tower.*',
+        exclude_modules=r'.*audio_tower.*',
         inference_mode=False,
         r=16,
         lora_alpha=32,
