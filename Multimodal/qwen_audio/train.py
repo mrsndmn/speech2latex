@@ -67,14 +67,16 @@ class Model_pl(pl.LightningModule):
 
     def configure_optimizers(self):
 
-        optimizer = torch.optim.AdamW(list(self.model.parameters()), lr=self.cfg.learning_rate, weight_decay=0.01)
+        optimizer = torch.optim.AdamW([p for p in self.model.parameters() if p.requires_grad], lr=self.cfg.learning_rate, weight_decay=0.01)
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=300, num_training_steps=self.n_iters)
-        return {'optimizer': optimizer, 'lr_scheduler': {
-            'scheduler': scheduler,
-            'interval': 'step',
-            'frequency': 1
-
-        }}
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': scheduler,
+                'interval': 'step',
+                'frequency': 1
+            },
+        }
 
     def on_train_epoch_end(self):
         # torch.save(self.model.lm_head.state_dict() ,f"ckpts/{self.cfg.exp_name}/lm_head_state_dict.pth")

@@ -42,13 +42,22 @@ if __name__ == "__main__":
     else:
         dataset_filtered = datasets.Dataset.load_from_disk(dataset_path)
 
+    # dataset_filtered = dataset_filtered.select(range(10))
+    # dataset_filtered = dataset_filtered.remove_columns(['context_before', 'context_after'])
+
     while True:
         ok = False
         try:
-            dataset_filtered.push_to_hub('marsianin500/Speech2Latex', split='equations_mathbridge_clean', max_shard_size='5GB')
+            dataset_filtered.push_to_hub(
+                'marsianin500/Speech2LatexMathBridge',
+                split='equations_mathbridge_clean',
+                max_shard_size='5GB'
+            )
             ok = True
         except Exception as e:
+            print("Failed to upload dataset to hub!")
             print(e)
+            breakpoint()
             time.sleep(10)
 
         if ok:

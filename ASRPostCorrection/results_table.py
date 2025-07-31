@@ -314,6 +314,10 @@ def main():
     experiments = []
 
     for model_name in os.listdir(ckpts_dir):
+        # print("model_name", model_name)
+        if model_name == 'asr-normalized-Qwen2.5-math-1.5B-instruct-2e':
+            continue
+
         model_experiments = os.path.join(ckpts_dir, model_name)
         if not os.path.isdir(model_experiments):
             continue
@@ -357,8 +361,6 @@ def main():
 
     text_only_cer_lower_table = build_s2l_sentences_table(copy.deepcopy(sentences_experiments))
     print(text_only_cer_lower_table)
-
-    breakpoint()
 
     return
 

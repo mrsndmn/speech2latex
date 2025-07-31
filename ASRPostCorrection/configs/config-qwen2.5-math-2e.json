@@ -1,5 +1,5 @@
 {
-      "exp_name": "asr-normalized-Qwen2.5-math-1.5B-instruct",
+      "exp_name": "asr-normalized-Qwen2.5-math-1.5B-instruct-2e",
       "model_ckpt": "Qwen/Qwen2.5-Math-1.5B-Instruct",
       "n_epochs": 2,
       "grad_accum": 1,
@@ -9,3 +9,4 @@
       "batch_size": 8,
       "ckp_iterations_step": 100000
   }
+
