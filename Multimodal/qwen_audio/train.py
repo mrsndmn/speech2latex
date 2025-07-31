@@ -163,8 +163,8 @@ if __name__ == "__main__":
         # exclude_modules=['audio_tower'],
         # exclude_modules=r'.*audio_tower.*',
         inference_mode=False,
-        r=8,          # Размер ранга
-        lora_alpha=16, # Коэффициент увеличения
+        r=16,
+        lora_alpha=32,
         lora_dropout=0.1,
         bias="none",
     )
