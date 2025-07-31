@@ -7,6 +7,9 @@ import datasets
 
 if __name__ == "__main__":
 
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
+
     dataset_path = './MathBridge_train_cleaned_normalized_train_dataset'
 
     if not os.path.exists(dataset_path):
