@@ -22,6 +22,7 @@ def parse_experiment_name(model_name: str, name: str) -> Dict[str, str]:
 
     name = name.replace('sentence_normalized', 'sentence-norm')
     name = name.replace('synthetic_small', 'synthetic-small')
+    name = name.replace('mix_full', 'mix-full')
 
     exp_name = name
 
@@ -119,7 +120,8 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
 
     # Prepare table data
     table_data = []
-    headers = ['Dataset', 'Column', 'Language', 'Data Type', 'Hash'] + [m.upper() for m in metrics_columns]
+    # headers = ['Dataset', 'Column', 'Language', 'Data Type', 'Hash'] + [m.upper() for m in metrics_columns]
+    headers = ['Dataset', 'Column', 'Language', 'Data Type',] + [m.upper() for m in metrics_columns]
 
     for exp in experiments:
         if exp['properties']['data_type'] != split_type:
@@ -143,7 +145,7 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
             # Add metric values
             for metric in metrics_to_show:
                 value = get_metric_value(metrics, metric)
-                row.append(f"{value:.4f}")
+                row.append(f"{value:.2f}")
 
             table_data.append(row)
 
@@ -156,7 +158,7 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
         table_data,
         headers=headers,
         tablefmt='latex',
-        floatfmt='.4f',
+        floatfmt='.2f',
         numalign='right'
     )
 
@@ -179,7 +181,8 @@ def build_s2l_equations_table(experiments):
     # Prepare table data
     table_data = []
     # headers = ['Dataset', 'Column', 'Language', 'Data Type', 'Hash'] + [m.upper() for m in metrics_columns]
-    headers = ['Model', 'Train', 'Language', 'Hash' ] + [m.upper() for m in metrics_columns]
+    # headers = ['Model', 'Train', 'Language', 'Hash' ] + [m.upper() for m in metrics_columns]
+    headers = ['Model', 'Train', 'Language', ] + [m.upper() for m in metrics_columns]
 
     for exp in experiments:
 
@@ -187,7 +190,7 @@ def build_s2l_equations_table(experiments):
             exp['properties']['model_name'],
             exp['properties']['data_type'],
             exp['properties']['language'],
-            exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
+            # exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
         ]
 
         for metric_split_type in metric_split_types:
@@ -201,14 +204,14 @@ def build_s2l_equations_table(experiments):
             # Add metric values
             for metric in metrics_to_show:
                 value = get_metric_value(metrics, metric)
-                row.append(f"{value:.4f}")
+                row.append(f"{value:.2f}")
 
         table_data.append(row)
 
     # Sort by dataset_split, language, data_type
 
     models_order = sorted(set([x[0] for x in table_data]))
-    train_split_order = [ 'mix', 'human', 'synthetic-small', '-' ]
+    train_split_order = [ 'mix-full', 'mix', 'human', 'synthetic-small', '-' ]
     languages_order = [ 'multilingual', 'eng', 'ru', ]
 
     table_data.sort(key=lambda x: (models_order.index(x[0]), train_split_order.index(x[1]), languages_order.index(x[2])))
@@ -219,7 +222,7 @@ def build_s2l_equations_table(experiments):
         table_data,
         headers=headers,
         tablefmt='latex',
-        floatfmt='.4f',
+        floatfmt='.2f',
         numalign='right'
     )
 
@@ -251,7 +254,8 @@ def build_s2l_sentences_table(experiments):
     # Prepare table data
     table_data = []
     # headers = ['Dataset', 'Column', 'Language', 'Data Type', 'Hash'] + [m.upper() for m in metrics_columns]
-    headers = ['Model', 'Train', 'Hash' ] + [m.upper() for m in metrics_columns]
+    # headers = ['Model', 'Train', 'Hash' ] + [m.upper() for m in metrics_columns]
+    headers = ['Model', 'Train', ] + [m.upper() for m in metrics_columns]
 
     for exp in experiments:
 
@@ -259,7 +263,7 @@ def build_s2l_sentences_table(experiments):
             exp['properties']['model_name'],
             exp['properties']['data_type'],
             # exp['properties']['language'],
-            exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
+            # exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
         ]
 
         for metric_split_type in metric_split_types:
@@ -273,7 +277,7 @@ def build_s2l_sentences_table(experiments):
             # Add metric values
             for metric in metrics_to_show:
                 value = get_metric_value(metrics, metric)
-                row.append(f"{value:.4f}")
+                row.append(f"{value:.2f}")
 
         table_data.append(row)
 
@@ -290,7 +294,7 @@ def build_s2l_sentences_table(experiments):
         table_data,
         headers=headers,
         tablefmt='latex',
-        floatfmt='.4f',
+        floatfmt='.2f',
         numalign='right'
     )
 

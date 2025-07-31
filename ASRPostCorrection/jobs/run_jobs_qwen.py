@@ -19,22 +19,33 @@ if __name__ == "__main__":
     config_files = os.listdir(f'{workdir}/configs')
     config_files = [f for f in config_files if f.endswith('.json')]
 
+    print("config_files", config_files)
+
     for config_file in config_files:
-        if config_file != 'config-qwen2.5-math-2e.json':
+        if 'test' in config_file:
+            print("Skipping test config", config_file)
             continue
 
-        # for dataset_split in ['equations']:
-        for dataset_split in ['sentences', 'equations']:
+        if config_file == 'config-qwen2.5-math-2e.json':
+            continue
+
+        if config_file == 'config-qwen2.5-1.5B.json':
+            continue
+
+
+        for dataset_split in ['equations']:
+        # for dataset_split in ['sentences', 'equations']:
             # for latex_column_name in ['sentence', 'sentence_normalized']:
             for latex_column_name in ['sentence_normalized']:
-                # for language in ['multilingual']:
-                for language in ['eng', 'ru', 'multilingual']:
+                for language in ['multilingual']:
+                # for language in ['eng', 'ru', 'multilingual']:
                     # for data_type in ['mix']:
 
                     if dataset_split == 'sentences' and (language == 'ru' or language == 'multilingual'):
                         continue
 
-                    for data_type in ['human', 'synthetic_small', 'mix']:
+                    for data_type in ['mix_full']:
+                    # for data_type in ['human', 'synthetic_small', 'mix']:
 
                         command = f"cd {workdir} && {env_prefix}/python train_test_qwen.py --dataset_split {dataset_split} --latex_column_name {latex_column_name} --language {language} --data_type {data_type} --config configs/{config_file}"
                         print("\n\n", command)

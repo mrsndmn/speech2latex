@@ -88,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_split', required=True, choices=['sentences', 'equations'])
     parser.add_argument('--latex_column_name', required=True, choices=['sentence', 'sentence_normalized'])
     parser.add_argument('--language', required=True, choices=['eng', 'ru', 'multilingual'])
-    parser.add_argument('--data_type', required=True, choices=['human', 'synthetic_small', 'synthetic_full', 'mix'])
+    parser.add_argument('--data_type', required=True, choices=['human', 'synthetic_small', 'synthetic_full', 'mix', 'mix_full'])
 
     parser.add_argument('--few_train_samples', type=int, default=None)
     parser.add_argument('--few_test_samples', type=int, default=None)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     train_dataset = train_dataset.remove_columns(set(train_dataset.column_names) - columns_to_keep)
     test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
 
-    if args.data_type == 'synthetic_full':
+    if 'full' in args.data_type:
         big_synthetic_dataset = datasets.Dataset.load_from_disk('../Data/mathbridge/MathBridge_train_cleaned_normalized_train_dataset/')
         big_synthetic_dataset = big_synthetic_dataset.add_column('is_tts', [1] * len(big_synthetic_dataset))
         big_synthetic_dataset = big_synthetic_dataset.add_column('language', ['eng'] * len(big_synthetic_dataset))

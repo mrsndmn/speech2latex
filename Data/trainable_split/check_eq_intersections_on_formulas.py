@@ -17,6 +17,11 @@ if __name__ == '__main__':
     check_intersections(train_ds, test_ds, 'sentence')
     check_intersections(train_ds, test_ds, 'sentence_normalized')
 
+    print("Equations Full")
+    big_synthetic_dataset = datasets.Dataset.load_from_disk('../mathbridge/MathBridge_train_cleaned_normalized_train_dataset/')
+    check_intersections(big_synthetic_dataset, test_ds, 'sentence_normalized')
+
+
     print("\n\n")
 
     train_ds = datasets.load_dataset('marsianin500/Speech2Latex', split='sentences_train')

@@ -12,6 +12,8 @@ from dataset import ASRDataset, get_collate_function, get_dataloader
 from test_qwen import batched_model_generation
 from tqdm.auto import tqdm
 
+import json
+
 
 if __name__ == '__main__':
 
@@ -30,9 +32,11 @@ if __name__ == '__main__':
 
     val_dataset = datasets.load_dataset(args.dataset, split='train')
 
-    latex_column = 'LaTeX'
-    if args.dataset == 'mrsndmn/MathSpeech_whisper_transcribed_normalized':
-        latex_column = 'latex_normalized'
+    # latex_column = 'LaTeX'
+    latex_column = 'latex_normalized'
+    assert args.dataset == 'mrsndmn/MathSpeech_whisper_transcribed_normalized'
+    # if args.dataset == 'mrsndmn/MathSpeech_whisper_transcribed_normalized':
+    #     latex_column = 'latex_normalized'
 
     val_dataset = val_dataset.map(lambda x: { latex_column: x[latex_column].removesuffix('$').removeprefix('$') })
 
