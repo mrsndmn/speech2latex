@@ -57,7 +57,7 @@ if __name__ == "__main__":
         except Exception as e:
             print("Failed to upload dataset to hub!")
             print(e)
-            breakpoint()
+            # breakpoint()
             time.sleep(10)
 
         if ok:
