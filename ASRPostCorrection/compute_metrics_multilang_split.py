@@ -141,43 +141,44 @@ if __name__ == "__main__":
 
             if len(df) == len(all_s2l['equations_test']):
                 language_column = all_s2l['equations_test']['language']
+                is_tts_column = all_s2l['equations_test']['is_tts']
             # elif len(df) == len(all_s2l['sentences_test']):
             #     language_column = all_s2l['sentences_test']['language']
             else:
                 raise ValueError("df size not matches any s2l splits")
 
             df['language'] = language_column
+            df['is_tts'] = is_tts_column
 
             # Split by language
             df_ru =  df[ df['language']  == 'ru' ]
             df_eng = df[ df['language']  == 'eng' ]
 
-            print("len df_ru", len(df_ru))
-            print("len df_eng", len(df_eng))
+            df_ru_mix = df_ru
+            df_eng_mix = df_eng
 
-            assert len(df_ru  ) > 0
-            assert len(df_eng ) > 0
+            df_ru_tts = df_ru[ df_ru['is_tts'] == True ]
+            df_ru_human = df_ru[ df_ru['is_tts'] == False ]
 
-            metrics_values = in_context_metrics.compute_all(df[latex_pred_column], df[latex_true_column], compute_text_only=False, compute_formulas_only=False)
+            df_eng_tts = df_eng[ df_eng['is_tts'] == True ]
+            df_eng_human = df_eng[ df_eng['is_tts'] == False ]
 
-            print("\n\nRU Metrics")
-            in_context_metrics.dump(metrics_values)
+            print("len df_ru_mix", len(df_ru_mix))
+            print("len df_eng_mix", len(df_eng_mix))
 
-            ru_metrics_out_file = os.path.join(os.path.dirname(file_path), 'ru_metrics.json')
+            print("len df_ru_tts", len(df_ru_tts))
+            print("len df_ru_human", len(df_ru_human))
 
-            with open(ru_metrics_out_file, 'w') as f:
-                json.dump(metrics_values, f)
+            print("len df_eng_tts", len(df_eng_tts))
+            print("len df_eng_human", len(df_eng_human))
 
-            print(f"RU metrics saved to {ru_metrics_out_file}")
+            print("Computing metrics")
 
-            print("\n\nENG Metrics")
-            metrics_values = in_context_metrics.compute_all(df[latex_pred_column], df[latex_true_column], compute_text_only=False, compute_formulas_only=False)
-
-            eng_metrics_out_file = os.path.join(os.path.dirname(file_path), 'eng_metrics.json')
-
-            with open(eng_metrics_out_file, 'w') as f:
-                json.dump(metrics_values, f)
-
-            print(f"ENG metrics saved to {eng_metrics_out_file}")
-
-
+            for lang in [ 'ru', 'eng' ]:
+                for split in [ 'mix', 'tts', 'human' ]:
+                    df_lang = eval(f"df_{lang}_{split}")
+                    metrics_values = in_context_metrics.compute_all(df_lang[latex_pred_column].values.tolist(), df_lang[latex_true_column].values.tolist(), compute_text_only=False, compute_formulas_only=False)
+                    in_context_metrics.dump(metrics_values)
+                    out_file = os.path.join(os.path.dirname(file_path), f"{lang}_{split}_metrics.json")
+                    with open(out_file, 'w') as f:
+                        json.dump(metrics_values, f)
