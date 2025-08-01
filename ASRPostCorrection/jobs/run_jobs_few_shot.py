@@ -21,7 +21,8 @@ if __name__ == "__main__":
     for model in models:
         for data_type in ['human', 'synthetic_small', 'mix']:
 
-            for n_few_shot in [5, 25]:
+            for n_few_shot in [ 5 ]:
+            # for n_few_shot in [5, 25]:
 
                 command = f"cd {workdir} && {env_prefix}/python sentences-few-shot.py --model {model} --data_type {data_type} --n_few_shot {n_few_shot}"
                 print("\n\n", command)
