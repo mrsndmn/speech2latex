@@ -32,7 +32,7 @@ if __name__ == "__main__":
         if config_file == 'config-qwen2.5-1.5B.json':
             continue
 
-        if config_file != 'config-qwen2.5-7B.json':
+        if config_file != 'config-proofGPT-1.3B.json':
             continue
 
         # for dataset_split in ['equations']:

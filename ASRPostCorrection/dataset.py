@@ -9,6 +9,7 @@ from chat_template_with_generation import CHAT_TEMPLATE_WITH_GENERATION
 from process_formula import NormalizeFormula
 
 
+
 class ASRDataset(Dataset):
     def __init__(self, dataset, pron_column_name='pron', latex_column_name='latex'):
         self.dataset = dataset

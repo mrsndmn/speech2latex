@@ -13,7 +13,7 @@ from typing import Dict, List, Any
 from tabulate import tabulate
 
 
-def parse_experiment_name(model_name: str, name: str) -> Dict[str, str]:
+def parse_experiment_name(model_name: str, name: str, model_type: str = 'ASR-PC') -> Dict[str, str]:
     """
     Parse experiment directory name to extract properties.
 
@@ -37,6 +37,7 @@ def parse_experiment_name(model_name: str, name: str) -> Dict[str, str]:
         hash_id = '_'.join(parts[4:]) if len(parts) > 4 else ''
 
         return {
+            'model_type': model_type,
             'model_name': model_name,
             'dataset_split': dataset_split,
             'column_type': column_type,
@@ -57,7 +58,7 @@ def parse_experiment_name(model_name: str, name: str) -> Dict[str, str]:
         }
 
 
-def load_metrics(ckpt_dir: str) -> Dict[str, Dict[str, float]]:
+def load_metrics(ckpt_dir: str, model_type: str = 'ASR-PC') -> Dict[str, Dict[str, float]]:
     """
     Load metrics from a checkpoint directory.
     Returns dict with keys: artificial, humans, mix
@@ -68,7 +69,13 @@ def load_metrics(ckpt_dir: str) -> Dict[str, Dict[str, float]]:
     broken_exp = False
 
     for metric_file in metric_files:
-        file_path = os.path.join(ckpt_dir, metric_file)
+        if model_type == 'ASR-PC':
+            file_path = os.path.join(ckpt_dir, metric_file)
+        elif model_type == 'Multimodal':
+            file_path = os.path.join(ckpt_dir, 'results', metric_file)
+        else:
+            raise ValueError(f"Unknown model type: {model_type}")
+
         if os.path.exists(file_path):
             try:
                 with open(file_path, 'r') as f:
@@ -309,6 +316,7 @@ def main():
     # import sys
     # ckpts_dir = sys.argv[1]
     ckpts_dir = "./ckpts"
+    
 
     if not os.path.exists(ckpts_dir):
         print(f"Error: Directory {ckpts_dir} not found!")
@@ -345,6 +353,33 @@ def main():
                     'metrics': metrics,
                     'path': item_path
                 })
+
+    qwen_audio_experiments = [
+        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix',
+        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix2-only-attention',
+        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix2-only-attention-with-audio',
+    ]
+    for qwen_audio_experiment in qwen_audio_experiments:
+        for item in os.listdir(qwen_audio_experiment):
+            item_path = os.path.join(qwen_audio_experiment, item)
+            assert os.path.isdir(item_path)
+
+            model_name = os.path.basename(qwen_audio_experiment)
+            model_name = model_name.replace('qwen2-audio-7b-instruct-lora', 'Qwen2-Audio-7B-instruct-LoRa')
+
+            # Parse experiment properties
+            properties = parse_experiment_name(model_name, item, model_type='Multimodal')
+
+            # Load metrics
+            metrics = load_metrics(item_path, model_type='Multimodal')
+
+            if metrics:  # Only include if we found metrics
+                experiments.append({
+                    'properties': properties,
+                    'metrics': metrics,
+                    'path': item_path
+                })
+
 
     print(f"Found {len(experiments)} experiments with full metrics")
 

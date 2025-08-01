@@ -116,7 +116,7 @@ if __name__ == "__main__":
 
     torch.set_default_dtype(torch.bfloat16)
 
-    tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen2.5-0.5B', padding_side="left")
+    tokenizer = AutoTokenizer.from_pretrained(os.path.join(path_to_to_ckpts, 'tokenizer'))
     model = AutoModelForCausalLM.from_pretrained(os.path.join(path_to_to_ckpts, 'tuned-model'), attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16).to(DEVICE)
 
     # model = PeftModel.from_pretrained(
