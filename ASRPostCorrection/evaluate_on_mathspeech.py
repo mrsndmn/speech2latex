@@ -41,7 +41,7 @@ if __name__ == '__main__':
     val_dataset = val_dataset.map(lambda x: { latex_column: x[latex_column].removesuffix('$').removeprefix('$') })
 
     batch_size = args.batch_size
-    collate_function = get_collate_function(tokenizer, process_formulas=None, latex_column=latex_column, whisper_column='whisper_text')
+    collate_function = get_collate_function(tokenizer, args.model, process_formulas=None, latex_column=latex_column, whisper_column='whisper_text')
     val_loader = get_dataloader(val_dataset, batch_size, collate_function, num_workers=0, train=False)
 
     outputs = defaultdict(list)

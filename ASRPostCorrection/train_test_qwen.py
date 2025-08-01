@@ -40,6 +40,7 @@ def test(
         model,
         tokenizer,
         test_dataset,
+        model_name,
         pron_column_name = 'whisper_text',
         latex_column_name = 'sentence',
     ):
@@ -58,7 +59,7 @@ def test(
     test_dataset = ASRDataset(test_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
 
     # formulas normalization will be performed in batched_model_generation
-    collate_function = get_collate_function(tokenizer, process_formulas=None)
+    collate_function = get_collate_function(tokenizer, model_name, process_formulas=None)
 
     batch_size = 32
     test_loader = get_dataloader(test_dataset, batch_size, collate_function, num_workers=0, train=False)
@@ -125,7 +126,7 @@ if __name__ == "__main__":
         print("model", model)
 
     ### Work with data
-    collate_function = get_collate_function(tokenizer)
+    collate_function = get_collate_function(tokenizer, cfg.model_ckpt)
 
     train_dataset_split = args.dataset_split
     test_dataset_split = args.dataset_split
@@ -215,6 +216,7 @@ if __name__ == "__main__":
         model,
         tokenizer,
         test_dataset,
+        model_name=cfg.model_ckpt,
         latex_column_name=latex_column_name,
     )
 

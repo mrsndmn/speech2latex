@@ -149,7 +149,7 @@ if __name__ == "__main__":
     val_dataset = ASRDataset(df, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
 
     # formulas normalization will be performed in batched_model_generation
-    collate_function = get_collate_function(tokenizer, process_formulas=None)
+    collate_function = get_collate_function(tokenizer, path_to_to_ckpts, process_formulas=None)
 
     batch_size = args.batch_size
     val_loader = get_dataloader(val_dataset, batch_size, collate_function, num_workers=0, train=False)
