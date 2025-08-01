@@ -354,11 +354,15 @@ def main():
                     'path': item_path
                 })
 
+    # experiments = []
     qwen_audio_experiments = [
+        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct',
+        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r8-a32-fix2',
         '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix',
-        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix2-only-attention',
-        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix2-only-attention-with-audio',
+        # '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix2-only-attention',
+        # '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-fix2-only-attention-with-audio',
     ]
+    qwen_audio_experiments = []
     for qwen_audio_experiment in qwen_audio_experiments:
         for item in os.listdir(qwen_audio_experiment):
             item_path = os.path.join(qwen_audio_experiment, item)
@@ -369,6 +373,8 @@ def main():
 
             # Parse experiment properties
             properties = parse_experiment_name(model_name, item, model_type='Multimodal')
+            if properties['language'] != 'eng':
+                continue
 
             # Load metrics
             metrics = load_metrics(item_path, model_type='Multimodal')
@@ -406,6 +412,8 @@ def main():
     }
 
     equations_experiments.append(mathspeech_experiment)
+
+    equations_experiments = [ exp for exp in experiments if exp['properties']['model_name'] not in ['proofGPT-1.3B', 'Llama-3.2-1B-Instruct'] ]
 
     sentences_experiments = [exp for exp in experiments if exp['properties']['dataset_split'] == 'sentences']
 

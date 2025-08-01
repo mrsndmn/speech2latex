@@ -29,7 +29,8 @@ if __name__ == "__main__":
     # df[latex_true_column] = df[latex_true_column].apply(lambda x: x.replace('\displaystyle', '').replace('\operatorname', ''))
 
     # Calc normalized
-    if True:
+    if False:
+    # if True:
         print("Normalizing all")
         norm = NormalizeFormula(check_node=False)
 
