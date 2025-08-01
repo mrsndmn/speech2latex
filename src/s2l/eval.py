@@ -35,8 +35,6 @@ class LatexInContextMetrics:
 
     def compute_tex_bleu(self, predictions, references):
 
-        return 0.0
-
         # Late import for faster startup
         # This library initializes global variables
         from tex_bleu import texbleu
