@@ -45,11 +45,11 @@ def unfreeze(model):
 
 
 class Model_pl(pl.LightningModule):
-    def __init__(self, cfg: dict[str, int|float|str], n_iters: int, model: nn.Module, tokenizer) -> None:
+    def __init__(self, cfg: dict[str, int|float|str], n_iters: int, model: nn.Module, model_config, tokenizer) -> None:
         super().__init__()
         self.cfg = cfg
         self.model = model
-        self.n_embeddings = model.model.embed_tokens.weight.shape[0]
+        self.n_embeddings = model_config.vocab_size
         # peft_cfg = LoraConfig(
         #     r=64,
         #     lora_alpha=128,

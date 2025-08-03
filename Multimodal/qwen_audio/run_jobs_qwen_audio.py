@@ -19,14 +19,15 @@ if __name__ == "__main__":
 
     for dataset_split in ['equations']:
     # for dataset_split in ['sentences', 'equations']:
-        for latex_column_name in ['sentence', 'sentence_normalized']:
-        # for latex_column_name in ['sentence_normalized']:
+        # for latex_column_name in ['sentence', 'sentence_normalized']:
+        for latex_column_name in ['sentence_normalized']:
             for language in ['multilingual']:
+            # for language in ['ru']:
             # for language in ['eng', 'ru', 'multilingual']:
                 if dataset_split == 'sentences' and (language == 'ru' or language == 'multilingual'):
                     continue
 
-                for data_type in ['mix']:
+                for data_type in ['mix_full']:
                 # for data_type in ['human', 'synthetic_small', 'mix']:
 
                     script = f"cd {workdir} && {env_prefix}/python train.py --config {config_name} --dataset_split {dataset_split} --latex_column_name {latex_column_name} --language {language} --data_type {data_type}"
@@ -40,7 +41,8 @@ if __name__ == "__main__":
                             'script': script,
                             'job_desc': f'S2L: Qwen Audio FT {dataset_split} lang={language} data={data_type} #{author_name} #rnd #multimodal @mrsndmn',
                             'env_variables': {
-                                'PYTHONPATH': './:../src:/workspace-SR004.nfs2/d.tarasov/ProcessLaTeXFormulaTools/',
+                                'PYTHONPATH': '/workspace-SR004.nfs2/d.tarasov/speech2latex-gh:/workspace-SR004.nfs2/d.tarasov/ProcessLaTeXFormulaTools:./:../src:../TeXBLEU:../TeXBLEU:/workspace-SR004.nfs2/d.tarasov/speech2latex-gh/src:../TeXBLEU:/workspace-SR004.nfs2/d.tarasov/speech2latex-gh/src:/workspace-SR004.nfs2/d.tarasov/speech2latex-gh/TeXBLEU',
+                                'HF_HOME': '/workspace-SR004.nfs2/.cache/huggingface',
                             },
                             'instance_type': 'a100.1gpu',
                             'region': extra_options['region'],

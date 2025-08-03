@@ -67,14 +67,16 @@ class Model_pl(pl.LightningModule):
 
     def configure_optimizers(self):
 
-        optimizer = torch.optim.AdamW(list(self.model.parameters()), lr=self.cfg.learning_rate, weight_decay=0.01)
+        optimizer = torch.optim.AdamW([p for p in self.model.parameters() if p.requires_grad], lr=self.cfg.learning_rate, weight_decay=0.05, betas=(0.9, 0.999), )
         scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=300, num_training_steps=self.n_iters)
-        return {'optimizer': optimizer, 'lr_scheduler': {
-            'scheduler': scheduler,
-            'interval': 'step',
-            'frequency': 1
-
-        }}
+        return {
+            'optimizer': optimizer,
+            'lr_scheduler': {
+                'scheduler': scheduler,
+                'interval': 'step',
+                'frequency': 1
+            },
+        }
 
     def on_train_epoch_end(self):
         # torch.save(self.model.lm_head.state_dict() ,f"ckpts/{self.cfg.exp_name}/lm_head_state_dict.pth")
@@ -91,14 +93,11 @@ class Model_pl(pl.LightningModule):
 
         self.log("my_loss", loss, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
 
-        if batch_idx % self.cfg.ckp_iterations_step == 0 and self.global_rank == 0:
-            os.makedirs(f"ckpts/{self.cfg.exp_name}/{batch_idx}", exist_ok=True)
-            self.model.save_pretrained(f"ckpts/{self.cfg.exp_name}/{batch_idx}/tuned-model")
-
         return loss
 
 
     def train_dataloader(self):
+        print("Batch size:", self.cfg.batch_size)
         return DataLoader(self.train_dataset, batch_size=self.cfg.batch_size, collate_fn=self.collate_function, num_workers = self.cfg.num_workers, shuffle = True)
 
 
@@ -114,8 +113,8 @@ if __name__ == "__main__":
     parser.add_argument('--few_train_samples', type=int, default=None)
     parser.add_argument('--dataset_split', type=str, required=True, choices=['sentences', 'equations'])
     parser.add_argument('--latex_column_name', type=str, required=True, choices=['sentence', 'sentence_normalized'])
-    parser.add_argument('--language', type=str, required=True, choices=['ru', 'en', 'multilingual'])
-    parser.add_argument('--data_type', type=str, required=True, choices=['synthetic_small', 'human', 'mix'])
+    parser.add_argument('--language', type=str, required=True, choices=['ru', 'eng', 'multilingual'])
+    parser.add_argument('--data_type', type=str, required=True, choices=['synthetic_small', 'human', 'mix', 'mix_full'])
 
     args = parser.parse_args()
 
@@ -126,13 +125,40 @@ if __name__ == "__main__":
     cfg = Config(**config_dict)
     # df = pd.read_csv(cfg.df_path, index_col=False)dummy_ex
 
+    processor = AutoProcessor.from_pretrained(cfg.model_ckpt, trust_remote_code=True)
+
+
     s2l_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{dataset_split}_train', num_proc=32)
+
+    if args.few_train_samples is not None:
+        s2l_dataset = s2l_dataset.select(range(args.few_train_samples))
+
+    print("len dataset", len(s2l_dataset))
+
+    columns_to_keep = ['audio_path', args.latex_column_name, 'is_tts', 'language']
+    s2l_dataset = s2l_dataset.remove_columns(list(set(s2l_dataset.column_names) - set(columns_to_keep)))
+
+    s2l_dataset = s2l_dataset.cast_column('audio_path', Audio(sampling_rate=processor.feature_extractor.sampling_rate))
+
+    if 'full' in args.data_type:
+        big_synthetic_dataset = datasets.Dataset.load_from_disk('../../Data/mathbridge/MathBridge_train_cleaned_normalized_train_dataset/')
+        big_synthetic_dataset = big_synthetic_dataset.add_column('is_tts', [1] * len(big_synthetic_dataset))
+        big_synthetic_dataset = big_synthetic_dataset.add_column('language', ['eng'] * len(big_synthetic_dataset))
+
+        big_synthetic_dataset = big_synthetic_dataset.remove_columns(set(big_synthetic_dataset.column_names) - set(columns_to_keep))
+
+        print("Adding synthetic dataset to train dataset")
+        print("Train dataset size", len(s2l_dataset))
+        print("Synthetic dataset size", len(big_synthetic_dataset))
+
+        train_dataset = datasets.concatenate_datasets([s2l_dataset, big_synthetic_dataset])
+        print("Concatenated dataset size", len(train_dataset))
 
     def filter_by_language_and_data_type(item):
         if args.language != 'multilingual' and item['language'] != args.language:
             return False
 
-        if args.data_type != 'mix':
+        if 'mix' not in args.data_type:
             if args.data_type == 'synthetic_small' and item['is_tts'] == 0:
                 return False
             elif args.data_type == 'human' and item['is_tts'] == 1:
@@ -140,39 +166,41 @@ if __name__ == "__main__":
 
         return True
 
-    if args.few_train_samples is not None:
-        s2l_dataset = s2l_dataset.select(range(args.few_train_samples))
 
-    train_dataset = s2l_dataset.filter(filter_by_language_and_data_type)
-
-    print("len dataset", len(s2l_dataset))
-
-    columns_to_leave = ['audio_path', args.latex_column_name]
-    s2l_dataset = s2l_dataset.remove_columns(list(set(s2l_dataset.column_names) - set(columns_to_leave)))
+    if args.data_type != 'mix_full':
+        s2l_dataset = s2l_dataset.filter(filter_by_language_and_data_type)
 
     torch.manual_seed(1234)
 
-    processor = AutoProcessor.from_pretrained(cfg.model_ckpt, trust_remote_code=True)
-
-    s2l_dataset = s2l_dataset.cast_column('audio_path', Audio(sampling_rate=processor.feature_extractor.sampling_rate))
 
     model = Qwen2AudioForConditionalGeneration.from_pretrained(cfg.model_ckpt, device_map="cpu", trust_remote_code=True, torch_dtype=torch.bfloat16)
 
     peft_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
-        # target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'fc_out', 'gate_proj', 'up_proj', 'down_proj'],
-        target_modules=["c_attn", "c_proj", "w1", "w2", "wte", "lm_head", "query", "key", "value", "out", "proj", "audio_bos_eos_token"],
+        target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj'],
+        # target_modules=['k_proj', 'v_proj', 'q_proj', 'o_proj', 'out_proj', 'gate_proj', 'up_proj', 'down_proj'],
+        # exclude_modules=['audio_tower'],
+        exclude_modules=r'.*audio_tower.*',
         inference_mode=False,
-        r=8,          # Размер ранга
-        lora_alpha=16, # Коэффициент увеличения
-        lora_dropout=0.1,
+        r=8,
+        lora_alpha=32,
+        # lora_dropout=0.1,
         bias="none",
     )
     model = get_peft_model(model, peft_config)
+    print("model", model)
+    # model = torch.compile(model, dynamic=True, )
+
+    # print("Unfreese multi_modal_projector")
+    # for p in model.base_model.multi_modal_projector.parameters():
+    #     p.requires_grad_(True)
+
+    print("Num trainable parameters:", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-    logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
+    logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}/{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
     os.makedirs(logger.save_dir, exist_ok=True)
+    print("Logger save dir:", logger.save_dir)
 
     train_dataset = s2l_dataset
     collate_function = DataCollatorForQwen2Audio(processor, sampling_rate=processor.feature_extractor.sampling_rate, latex_column_name=args.latex_column_name)
@@ -183,6 +211,7 @@ if __name__ == "__main__":
         logger = logger,
         accumulate_grad_batches = cfg.grad_accum,
         enable_checkpointing=False,
+        gradient_clip_val=1.0,
     )
     trainer.fit(module)
 

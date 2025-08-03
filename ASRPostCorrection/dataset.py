@@ -5,8 +5,9 @@ from typing import Callable, List
 
 import random
 
-from chat_template_with_generation import CHAT_TEMPLATE_WITH_GENERATION
+from chat_template_with_generation import CHAT_TEMPLATE_WITH_GENERATION, CHAT_TEMPLATE_WITH_GENERATION_LLAMA32
 from process_formula import NormalizeFormula
+
 
 
 class ASRDataset(Dataset):
@@ -27,12 +28,16 @@ class ASRDataset(Dataset):
             "latex": item[self.latex_column_name],
         }
 
-def get_collate_function(tokenizer, process_formulas=None):
-    
+def get_collate_function(tokenizer, model_name, process_formulas=None, latex_column='latex', whisper_column='pron'):
+
     user_instructions_prefix = [
         # 'Translate  transcribation to LaTex formula: '
         'Please, give me LaTeX representation of the following formula. Formula pronunciation: '
     ]
+
+    chat_template = CHAT_TEMPLATE_WITH_GENERATION
+    if 'llama' in model_name.lower():
+        chat_template = CHAT_TEMPLATE_WITH_GENERATION_LLAMA32
     
     def formulas_preprocessor(formulas_list):
         if process_formulas is not None:
@@ -44,10 +49,10 @@ def get_collate_function(tokenizer, process_formulas=None):
         all_chats = []
         all_chats_no_assistant_answer = []
         
-        latex_processed = formulas_preprocessor([ item['latex'] for item in dataset_items ])
+        latex_processed = formulas_preprocessor([ item[latex_column] for item in dataset_items ])
         
         for i, dataset_item in enumerate(dataset_items):
-            pronunciation = dataset_item['pron']
+            pronunciation = dataset_item[whisper_column]
             latex = latex_processed[i]
 
             user_instruction_prefix = random.choice(user_instructions_prefix)
@@ -65,7 +70,7 @@ def get_collate_function(tokenizer, process_formulas=None):
             all_chats,
             padding=True,
             tokenize=True,
-            chat_template=CHAT_TEMPLATE_WITH_GENERATION,
+            chat_template=chat_template,
             return_assistant_tokens_mask=True,
             return_dict=True,
             return_tensors='pt',
@@ -75,7 +80,7 @@ def get_collate_function(tokenizer, process_formulas=None):
             all_chats_no_assistant_answer,
             padding=True,
             tokenize=True,
-            chat_template=CHAT_TEMPLATE_WITH_GENERATION,
+            chat_template=chat_template,
             return_assistant_tokens_mask=True,
             return_dict=True,
             return_tensors='pt',

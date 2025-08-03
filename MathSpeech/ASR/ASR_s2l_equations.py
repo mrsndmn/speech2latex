@@ -1,5 +1,6 @@
 # Hugging Face datasets provides the audio column, but we alias here to avoid
 # confusion with the torch.utils.data.Dataset class.
+import datasets
 from datasets import Dataset as HFDataset, Audio
 import argparse
 import torch
@@ -64,6 +65,8 @@ if __name__ == "__main__":
     parser.add_argument('--shard_number', type=int, default=0)
     parser.add_argument('--total_shards', type=int, default=1)
     parser.add_argument('--dataset_path', type=str, default='../../Data/trainable_split/equations_dev_new/')
+    parser.add_argument('--dataset_split', type=str, default=None)
+    parser.add_argument('--dataset_column', type=str, default='sentence_normalized')
     parser.add_argument('--output_prefix', type=str, default='../Experiments/result_ASR_s2l_equations_')
 
     args = parser.parse_args()
@@ -73,7 +76,11 @@ if __name__ == "__main__":
 
     print(f'ASR S2L Equations {model_type}')
 
-    dataset = HFDataset.load_from_disk(args.dataset_path)
+    if args.dataset_path.startswith('marsianin500/'):
+        dataset = datasets.load_dataset(args.dataset_path)
+        dataset = dataset[args.dataset_split]
+    else:
+        dataset = HFDataset.load_from_disk(args.dataset_path)
 
     # Cast the audio column to the expected sampling rate for Whisper.
     dataset = dataset.cast_column('audio_path', Audio(sampling_rate=16000))
@@ -97,7 +104,7 @@ if __name__ == "__main__":
         )
 
     df_dict = {
-        'LaTeX': dataset['sentence'],
+        'LaTeX': dataset[args.dataset_column],
     }
 
     batch_size = 64

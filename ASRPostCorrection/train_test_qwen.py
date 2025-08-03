@@ -38,7 +38,9 @@ from qwen_pl import Model_pl, Config
 
 def test(
         model,
+        tokenizer,
         test_dataset,
+        model_name,
         pron_column_name = 'whisper_text',
         latex_column_name = 'sentence',
     ):
@@ -47,7 +49,7 @@ def test(
 
     torch.set_default_dtype(torch.bfloat16)
 
-    tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen2.5-0.5B', padding_side="left")
+    assert tokenizer.padding_side == 'left'
 
     model.eval()
     # model = torch.compile(model, mode='reduce-overhead')
@@ -57,7 +59,7 @@ def test(
     test_dataset = ASRDataset(test_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
 
     # formulas normalization will be performed in batched_model_generation
-    collate_function = get_collate_function(tokenizer, process_formulas=None)
+    collate_function = get_collate_function(tokenizer, model_name, process_formulas=None)
 
     batch_size = 32
     test_loader = get_dataloader(test_dataset, batch_size, collate_function, num_workers=0, train=False)
@@ -87,7 +89,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_split', required=True, choices=['sentences', 'equations'])
     parser.add_argument('--latex_column_name', required=True, choices=['sentence', 'sentence_normalized'])
     parser.add_argument('--language', required=True, choices=['eng', 'ru', 'multilingual'])
-    parser.add_argument('--data_type', required=True, choices=['human', 'synthetic_small', 'synthetic_full', 'mix'])
+    parser.add_argument('--data_type', required=True, choices=['human', 'synthetic_small', 'synthetic_full', 'mix', 'mix_full'])
 
     parser.add_argument('--few_train_samples', type=int, default=None)
     parser.add_argument('--few_test_samples', type=int, default=None)
@@ -109,9 +111,25 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(cfg.model_ckpt, padding_side="left")
     model = AutoModelForCausalLM.from_pretrained(cfg.model_ckpt, attn_implementation='flash_attention_2', torch_dtype=torch.bfloat16)
     # model = AutoModelForCausalLM.from_pretrained("ckpts/asr-sentence/version_24/tuned-model")
+    model_config = model.config
+
+    if hasattr(cfg, 'lora_r') and cfg.lora_r is not None:
+        from peft import LoraConfig, get_peft_model
+        lora_config = LoraConfig(
+            r=cfg.lora_r,
+            lora_alpha=cfg.lora_alpha,
+            # target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "down_proj", "up_proj"],
+            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        )
+
+        model = get_peft_model(model, lora_config)
+        print("model", model)
 
     ### Work with data
-    collate_function = get_collate_function(tokenizer)
+    collate_function = get_collate_function(tokenizer, cfg.model_ckpt)
+
+    train_dataset_split = args.dataset_split
+    test_dataset_split = args.dataset_split
 
     train_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_train', num_proc=32)
     test_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{args.dataset_split}_test', num_proc=32)
@@ -124,12 +142,26 @@ if __name__ == "__main__":
     train_dataset = train_dataset.remove_columns(set(train_dataset.column_names) - columns_to_keep)
     test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
 
+    if 'full' in args.data_type:
+        big_synthetic_dataset = datasets.Dataset.load_from_disk('../Data/mathbridge/MathBridge_train_cleaned_normalized_train_dataset/')
+        big_synthetic_dataset = big_synthetic_dataset.add_column('is_tts', [1] * len(big_synthetic_dataset))
+        big_synthetic_dataset = big_synthetic_dataset.add_column('language', ['eng'] * len(big_synthetic_dataset))
+
+        big_synthetic_dataset = big_synthetic_dataset.remove_columns(set(big_synthetic_dataset.column_names) - columns_to_keep)
+
+        print("Adding synthetic dataset to train dataset")
+        print("Train dataset size", len(train_dataset))
+        print("Synthetic dataset size", len(big_synthetic_dataset))
+
+        train_dataset = datasets.concatenate_datasets([train_dataset, big_synthetic_dataset])
+        print("Concatenated dataset size", len(train_dataset))
+
     def filter_by_language_and_data_type(item):
         if args.language != 'multilingual' and item['language'] != args.language:
             return False
 
         if args.data_type != 'mix':
-            if args.data_type == 'synthetic_small' and item['is_tts'] == 0:
+            if 'synthetic' in args.data_type and item['is_tts'] == 0:
                 return False
             elif args.data_type == 'human' and item['is_tts'] == 1:
                 return False
@@ -141,13 +173,16 @@ if __name__ == "__main__":
 
     train_dataset = train_dataset.filter(filter_by_language_and_data_type)
 
+    print("Train dataset size", len(train_dataset))
+    print("Test dataset size", len(test_dataset))
+
     train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
     train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True)
 
-    module = Model_pl(cfg, len(train_loader), model, tokenizer)
+    module = Model_pl(cfg, len(train_loader), model, model_config, tokenizer)
 
     random_chars = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
-    csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}_{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
+    csv_logger = CSVLogger(save_dir=f"ckpts/{cfg.exp_name}/{args.dataset_split}_{args.latex_column_name}_{args.language}_{args.data_type}_{random_chars}")
     os.makedirs(csv_logger.save_dir, exist_ok=True)
 
     print("output dir", csv_logger.save_dir)
@@ -179,7 +214,9 @@ if __name__ == "__main__":
 
     outputs = test(
         model,
+        tokenizer,
         test_dataset,
+        model_name=cfg.model_ckpt,
         latex_column_name=latex_column_name,
     )
 
@@ -190,10 +227,6 @@ if __name__ == "__main__":
     evaluation_df_mix = evaluation_df.copy()
     evaluation_df_artificial = evaluation_df[ evaluation_df['is_tts'] == 1 ].copy()
     evaluation_df_humans = evaluation_df[ evaluation_df['is_tts'] == 0 ].copy()
-
-    evaluation_df_artificial.to_csv(os.path.join(results_save_dir, 'evaluation_df_artificial.csv'), index=False)
-    evaluation_df_humans.to_csv(os.path.join(results_save_dir, 'evaluation_df_humans.csv'), index=False)
-    evaluation_df_mix.to_csv(os.path.join(results_save_dir, 'evaluation_df_mix.csv'), index=False)
 
     # Mix metrics
     metrics_splits = [

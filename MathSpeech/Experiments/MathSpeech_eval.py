@@ -83,7 +83,7 @@ class MathASR(torch.nn.Module):
         )
 
         latex_outputs = [
-            self.tokenizer.decode(ids[1:-1], skip_special_tokens=False).replace(" ", "")
+            self.tokenizer.decode(ids[1:-1], skip_special_tokens=False)
             for ids in latex_ids
         ]
         latex_outputs = [c.replace("<pad>", "").replace("</s>", "") for c in latex_outputs]

@@ -34,6 +34,7 @@ class LatexInContextMetrics:
         self.chrf = evaluate.load("chrf")
 
     def compute_tex_bleu(self, predictions, references):
+
         # Late import for faster startup
         # This library initializes global variables
         from tex_bleu import texbleu
