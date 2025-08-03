@@ -101,10 +101,6 @@ class Model_pl(pl.LightningModule):
         return DataLoader(self.train_dataset, batch_size=self.cfg.batch_size, collate_fn=self.collate_function, num_workers = self.cfg.num_workers, shuffle = True)
 
 
-
-# Example:
-# python train.py --dataset_path /workspace-SR004.nfs2/d.tarasov/rsi-speech2latex/Data/trainable_split/equations_dev_new/ --config configs/config.json
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
