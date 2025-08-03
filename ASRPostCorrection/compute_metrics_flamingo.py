@@ -61,6 +61,9 @@ if __name__ == "__main__":
 
     is_tts, split_name = length_to_dataframe_mapping[len(df)]
 
+    df = df[ eq_test_df_mix_multilang['language'] == 'eng' ]
+    is_tts = is_tts[ eq_test_df_mix_multilang['language'] == 'eng' ]
+
     human_df = df[(is_tts == 0).values]
     tts_df = df[(is_tts == 1).values]
 
@@ -75,7 +78,7 @@ if __name__ == "__main__":
     in_context_metrics.dump(mix_values)
 
     print("Latex results:", split_name)
-    print(f"Flamingo                   & TODO             & TODO             & TODO           &       {mix_values['cer_lower']*100:.2f} &     {mix_values['tex_bleu']*100:.2f} &     {human_metrics['cer_lower']*100:.2f} &      {human_metrics['tex_bleu']*100:.2f} &      {tts_metrics['cer_lower']*100:.2f} &        {tts_metrics['tex_bleu']*100:.2f}  \\")
+    print(f"Flamingo                   & TODO             & TODO             & TODO           &       {mix_values['cer_lower']*100:.2f} &     {mix_values['tex_bleu']*100:.2f} &     {human_metrics['cer_lower']*100:.2f} &      {human_metrics['tex_bleu']*100:.2f} &      {tts_metrics['cer_lower']*100:.2f} &        {tts_metrics['tex_bleu']*100:.2f}  \\\\")
     # print("    &   ".join(map(lambda x: f"{x*100*100:.2f}", [ , , , , ,  ])))
 
     breakpoint()

@@ -12,6 +12,51 @@ from collections import defaultdict
 from typing import Dict, List, Any
 from tabulate import tabulate
 
+def parse_experiment_name_few_shot(model_name: str, name: str, model_type) -> Dict[str, str]:
+    """
+    Parse experiment directory name to extract properties.
+
+    Expected format: asr-normalized-Qwen2.5-0.5B_{dataset_split}_{column_type}_{language}_{data_type}_{hash}
+    """
+
+    assert model_type == 'ZeroShot'
+
+    name = name.replace('n_few_shot', 'n-few-shot')
+    name = name.replace('synthetic_small', 'synthetic-small')
+
+    exp_name = name
+
+    # Remove the base model name and hash
+    parts = exp_name.split('_')
+
+    assert len(parts) == 4
+
+    if True:
+        model_name = parts[0]  # model name again
+        column_type = parts[1]    # sentence or sentence_normalized
+        language = 'eng'
+        data_type = parts[1]
+        n_few_shot = parts[3]
+
+        if data_type == 'mix':
+            return None
+
+        if n_few_shot != '25':
+            return None
+
+        dataset_split = 'sentences'
+
+        return {
+            'model_type': model_type,
+            'model_name': model_name +  f' {n_few_shot}-shot',
+            'dataset_split': dataset_split,
+            'column_type': column_type,
+            'language': language,
+            'data_type': data_type,
+            'hash_id': '',
+            'full_name': name
+        }
+
 
 def parse_experiment_name(model_name: str, name: str, model_type: str = 'ASR-PC') -> Dict[str, str]:
     """
@@ -66,6 +111,9 @@ def load_metrics(ckpt_dir: str, model_type: str = 'ASR-PC') -> Dict[str, Dict[st
     metrics = {}
     metric_files = ['artificial_metrics.json', 'humans_metrics.json', 'mix_metrics.json']
 
+    if model_type == 'ZeroShot':
+        metric_files = [ 'metrics_human.json', 'metrics_tts.json' ]
+
     broken_exp = False
 
     for metric_file in metric_files:
@@ -73,6 +121,8 @@ def load_metrics(ckpt_dir: str, model_type: str = 'ASR-PC') -> Dict[str, Dict[st
             file_path = os.path.join(ckpt_dir, metric_file)
         elif model_type == 'Multimodal':
             file_path = os.path.join(ckpt_dir, 'results', metric_file)
+        elif model_type == 'ZeroShot':
+            file_path = os.path.join(ckpt_dir, metric_file)
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 
@@ -81,7 +131,9 @@ def load_metrics(ckpt_dir: str, model_type: str = 'ASR-PC') -> Dict[str, Dict[st
                 with open(file_path, 'r') as f:
                     data = json.load(f)
                     # Extract the split name from filename
-                    split_name = metric_file.replace('_metrics.json', '')
+                    split_name = metric_file.replace('.json', '')
+                    split_name = split_name.replace('_metrics', '')
+                    split_name = split_name.replace('metrics_', '')
                     metrics[split_name] = data
             except (json.JSONDecodeError, IOError) as e:
                 print(f"Warning: Could not load {file_path}: {e}")
@@ -173,7 +225,8 @@ def create_results_table(experiments: List[Dict[str, Any]], split_type: str = 'm
 
 def build_s2l_equations_table(experiments):
 
-    metric_split_types = ['mix', 'humans', 'artificial']
+    # metric_split_types = ['mix', 'humans', 'artificial']
+    metric_split_types = ['human', 'tts']
     # metric_split_types = ['mix']
 
     metrics_to_show = [
@@ -238,7 +291,7 @@ def build_s2l_equations_table(experiments):
 
 def build_s2l_sentences_table(experiments):
 
-    metric_split_types = ['humans', 'artificial']
+    metric_split_types = ['human', 'tts']
     # metric_split_types = ['mix']
 
     metrics_to_show = [
@@ -266,9 +319,28 @@ def build_s2l_sentences_table(experiments):
 
     for exp in experiments:
 
+        data_type_mapping = {
+            'human': 'H',
+            'synthetic-small': 'A',
+            'mix': 'Mix',
+        }
+
+        model_name_mapping = {
+            'Qwen2.5-0.5B-Instruct 5-shot': 'Q-0.5B 5-shot',
+            'Qwen2.5-1.5B-Instruct 5-shot': 'Q-1.5B 5-shot',
+            'Qwen2.5-Math-1.5B-Instruct 5-shot': 'Q-math-1.5B 5-shot',
+            'Qwen2.5-7B-Instruct 5-shot': 'Q-7B 5-shot',
+
+            'Qwen2.5-0.5B-Instruct 25-shot': 'Q-0.5B 25-shot',
+            'Qwen2.5-1.5B-Instruct 25-shot': 'Q-1.5B 25-shot',
+            'Qwen2.5-Math-1.5B-Instruct 25-shot': 'Q-math-1.5B 25-shot',
+            'Qwen2.5-7B-Instruct 25-shot': 'Q-7B 25-shot',
+
+        }
+
         row = [
-            exp['properties']['model_name'],
-            exp['properties']['data_type'],
+            model_name_mapping[exp['properties']['model_name']],
+            data_type_mapping[exp['properties']['data_type']],
             # exp['properties']['language'],
             # exp['properties']['hash_id'][:8] if exp['properties']['hash_id'] else ''
         ]
@@ -291,9 +363,9 @@ def build_s2l_sentences_table(experiments):
     # Sort by dataset_split, language, data_type
 
     models_order = sorted(set([x[0] for x in table_data]))
-    train_split_order = [ 'mix', 'human', 'synthetic-small' ]
+    train_split_order = [ 'A', 'H', 'Mix', ]
 
-    table_data.sort(key=lambda x: (models_order.index(x[0]), train_split_order.index(x[1])))
+    table_data.sort(key=lambda x: (models_order.index(x[0]), train_split_order.index(x[1]), ))
 
     # Generate LaTeX table
     # breakpoint()
@@ -385,6 +457,31 @@ def main():
                     'metrics': metrics,
                     'path': item_path
                 })
+
+    experiments = []
+
+    fs_base_path = './ckpts_few_shot'
+    few_shot_experiments = list(os.listdir(fs_base_path))
+    for fs_model_name in few_shot_experiments:
+        item_path = os.path.join(fs_base_path, fs_model_name)
+        assert os.path.isdir(item_path)
+
+        model_name = fs_model_name
+
+        # Parse experiment properties
+        properties = parse_experiment_name_few_shot(model_name, fs_model_name, model_type='ZeroShot')
+        if properties is None:
+            continue
+
+        # Load metrics
+        metrics = load_metrics(item_path, model_type='ZeroShot')
+
+        if metrics:  # Only include if we found metrics
+            experiments.append({
+                'properties': properties,
+                'metrics': metrics,
+                'path': item_path
+            })
 
 
     print(f"Found {len(experiments)} experiments with full metrics")

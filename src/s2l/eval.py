@@ -1,5 +1,6 @@
 from typing import List
 from tqdm import tqdm
+import pandas as pd
 
 import evaluate
 
@@ -133,6 +134,12 @@ class LatexInContextMetrics:
         return metrics
 
     def compute_all(self, prediction, references, compile_with_katex=False, compute_text_only=True, compute_formulas_only=True):
+        
+        if isinstance(prediction, pd.Series):
+            prediction = prediction.values.tolist()
+        if isinstance(references, pd.Series):
+            references = references.values.tolist()
+
         metrics = self.compute(prediction, references)
 
         if compute_formulas_only:
