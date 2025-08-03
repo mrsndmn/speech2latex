@@ -35,4 +35,4 @@ s2l_*_normalized_dirty
 MathSpeech_whisper_transcribed_normalized
 config-qwen2.5-1.5B-test.json
 ckpts_few_shot
-submission_code
+speech2latex_code_submission
