@@ -16,12 +16,6 @@ class WavLMWorker(torch.nn.Module):
         return waveform
 
     def get_transcription(self, audio_path):
-        """
-        Метод для получения транскрипции аудиофайла.
-        
-        audio_path: Путь к аудиофайлу.
-        """
-        
         # Load audio
         waveform = self.load_audio(audio_path)
         

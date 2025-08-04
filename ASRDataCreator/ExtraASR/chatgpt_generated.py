@@ -17,9 +17,7 @@ from tqdm import tqdm
 from pydub import AudioSegment
 
 def get_audio_duration(file_path):
-    # Загружаем аудио файл
     audio = AudioSegment.from_file(file_path)
-    # Длительность в миллисекундах, переводим в секунды
     duration_in_seconds = len(audio) / 1000
     return duration_in_seconds
 def extract_number(filename):
@@ -111,8 +109,8 @@ for _,row in df.iterrows():
 
 duration = time.time() - start_time
 print(f"duration work {duration} for table shape{df.shape}")
-print(f"среднее время работы одного батча {batch_size}",sum(_times)/len(_times))
-print("для Темы чето",sum(_tt)/duration)
+print(f"avg batch processing {batch_size}",sum(_times)/len(_times))
+print(sum(_tt)/duration)
 
 res = pd.DataFrame(dict_trans)
 res.to_csv(path_output,index=False)

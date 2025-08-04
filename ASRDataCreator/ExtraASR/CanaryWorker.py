@@ -13,11 +13,6 @@ class CanaryWorker(torch.nn.Module):
         self.model.change_decoding_strategy(decode_cfg)
         
     def get_transcription(self, audio_path):
-        """
-        Метод для получения транскрипции аудиофайла.
-
-        audio_path: Путь к аудиофайлу.
-        """
 
         predicted_text = self.model.transcribe(
             paths2audio_files=[audio_path],

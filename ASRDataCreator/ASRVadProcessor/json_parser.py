@@ -15,29 +15,9 @@ def get_full_text(timestamps):
         text+= timestamp["text"] + " "
     return text
 
-# def extract_number(filename):
-#     # Регулярное выражение для поиска числа между "audio_" и ".wav"
-#     match = re.search(r'audio_(\d+)\.wav', filename)
-#     if match:
-#         return int(match.group(1))
-
-#     match = re.search(r'audio_(\d+)\.json', filename)
-#     if  match:
-#         return int(match.group(1))
-    
-#     return None
-
 
 def extract_number(filename):
-    # # Регулярное выражение для поиска числа между "audio_" и ".wav"
-    # match = re.search(r'audio_(\d+)\.wav', filename)
-    # if match:
-    #     return int(match.group(1))
-    # else:
-    #     return None
-    # Используем регулярное выражение для поиска первого числа
     match = re.search(r'\d+', filename)
-    # Если число найдено, возвращаем его как целое число, иначе возвращаем None
     return int(match.group()) if match else None
 
     
@@ -51,7 +31,6 @@ def get_audios_paths(data_path):
     return sorted(audios_paths,key = lambda x:extract_number(x[1]))
 
 def read_excel_to_df(file_path,sheet_name = 0):
-    # Чтение Excel файла
     ending = file_path.split(".")[-1]
     if ending == "csv":
         return pd.read_csv(file_path)
@@ -114,8 +93,6 @@ workbook.save(path_output)
 with open(speakers_file,"w+") as file:
     for i,speaker in enumerate(speaker_names):
         file.write(f"{i} {speaker}\n")
-
-print(f"Данные добавлены в файл {path_output} ")
 
         
 

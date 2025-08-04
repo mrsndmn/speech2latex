@@ -73,8 +73,8 @@ if __name__ == "__main__":
                                 'type': 'binary_exp',
                                 'shm_size_class': 'medium',
                                 'base_image': 'cr.ai.cloud.ru/aicloud-base-images/cuda12.1-torch2-py311:0.0.36',
-                                'n_workers': 1,              # Количество воркеров.
-                                'processes_per_worker': 1,   # Количество процессов на воркер. Для accelerate нужно запускать 1 процесс на воркер. Для torchrun лучше не заполнять этот параметр. По умолчанию запускается по количеству GPU на одном воркере - это подходит для torchrun.
+                                'n_workers': 1,
+                                'processes_per_worker': 1,
                             }
                         )
 

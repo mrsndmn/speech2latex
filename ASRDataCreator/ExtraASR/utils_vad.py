@@ -160,7 +160,6 @@ def read_audio(path: str,
 
 
 def convert_to_wav_ffmpeg(path: str, output_path: str, sampling_rate: int = 16000):
-    """Конвертирует файл в формат WAV с использованием ffmpeg."""
     try:
         command = [
             'ffmpeg', '-i', path, '-ar', str(sampling_rate), '-ac', '1', output_path
@@ -168,7 +167,7 @@ def convert_to_wav_ffmpeg(path: str, output_path: str, sampling_rate: int = 1600
         subprocess.run(command, check=True)
         return output_path
     except Exception as e:
-        raise RuntimeError(f"Ошибка конвертации файла {path} с помощью ffmpeg: {str(e)}")
+        raise RuntimeError(f"Error File {path} with ffmpeg: {str(e)}")
 
 
 def save_audio(path: str,

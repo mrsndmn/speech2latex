@@ -19,10 +19,10 @@ feature_extractor = WhisperFeatureExtractor.from_pretrained(model_name)
 processor = WhisperProcessor.from_pretrained(model_name)
 model = WhisperForConditionalGeneration.from_pretrained(model_name, device_map="auto", max_memory=max_memory_mapping)
 
-def preprocess_data(batch):    
+def preprocess_data(batch):
     labels = processor.tokenizer(batch['latex']).input_ids
     batch["labels"] = labels
-    
+
     batch["input_features"] = batch['audio_path']
     return batch
 
@@ -44,13 +44,13 @@ class DataCollatorSpeechSeq2SeqWithPadding:
             resampler = torchaudio.transforms.Resample(orig_freq=sr, new_freq=16_000)
             audio = resampler(audio)
             audio = feature_extractor(audio.squeeze(0), sampling_rate=16_000).input_features[0]
-            
+
             input_features.append({
                 "input_features": audio,
             })
-        
+
         batch = self.processor.feature_extractor.pad(input_features, return_tensors="pt")
-        
+
         label_features = [{"input_ids": feature["labels"]} for feature in features]
         labels_batch = self.processor.tokenizer.pad(label_features, return_tensors="pt")
 
@@ -73,7 +73,7 @@ from transformers import Seq2SeqTrainingArguments
 training_args = Seq2SeqTrainingArguments(
     output_dir="./whisper-small-hi",
     per_device_train_batch_size=8,
-    gradient_accumulation_steps=2,  
+    gradient_accumulation_steps=2,
     learning_rate=1e-5,
     warmup_steps=500,
     max_steps=5000,

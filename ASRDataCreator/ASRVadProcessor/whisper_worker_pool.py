@@ -3,7 +3,7 @@ import os
 import time
 import tqdm
 import logging
-# from multiprocessing import Process,Pool
+
 import torch.multiprocessing as mp
 from functools import partial
 from audio_worker import AudioWorker
@@ -13,27 +13,24 @@ import os
 import re
 import tqdm
 
-# Настройка логирования
 logging.basicConfig(
-    filename='whisper_pool.log',  # Лог сохраняется в файл csv_worker.log
-    level=logging.INFO,         # Уровень логирования (INFO, DEBUG, ERROR и т.д.)
+    filename='whisper_pool.log',  
+    level=logging.INFO,         
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 def extract_number(filename):
 
     match = re.search(r'\d+', filename)
-    # Если число найдено, возвращаем его как целое число, иначе возвращаем None
+    
     return int(match.group()) if match else None
 
 
 def process_audios(audioWorker:AudioWorker,audio_paths_arr,df:pd.DataFrame, _result_path):
 
-    # #мега костыль. Потому что не обработано первое произношение в мат бридже.
-    # next(df_iters)
     ids = set(df["FILENAME"].astype(dtype=int).to_list())
 
-    # assert len(audio_paths_arr) == df.shape[0]
+    
     batch_size = 64
     pbar = tqdm.tqdm(range(0,len(audio_paths_arr),batch_size))
 
@@ -41,7 +38,7 @@ def process_audios(audioWorker:AudioWorker,audio_paths_arr,df:pd.DataFrame, _res
 
         batch_paths = audio_paths_arr[i:min(len(audio_paths_arr),i+batch_size)]
         results = audioWorker.get_word_timestamps_batch(batch_paths,batch_size=batch_size)
-        # results = [0]*batch_size
+        
         
         pbar.set_description(f"process batch {i}:{i+batch_size}")
         for result,apa in zip(results,batch_paths):
@@ -62,26 +59,14 @@ def process_audios(audioWorker:AudioWorker,audio_paths_arr,df:pd.DataFrame, _res
             result_path = os.path.join(output_path,f"{file_name}.json")
 
             if os.path.exists(result_path):
-                print(f"{result_path} уже существует")
+                print(f"{result_path} already exists")
                 continue
 
-            # dict_res = read_json(result_path)
+            
                   
             words_timestamps = None
             sentences_timestamps = None
 
-            # try:
-            #     if dict_res is None:
-            #         words_timestamps = audioWorker.get_word_timestamps(audio_path)
-            #         sentences_timestamps = audioWorker.get_sentences_with_timestamps(words_timestamps)
-            #     else:
-            #         words_timestamps = dict_res["words_timestamps"]
-            #         sentences_timestamps = dict_res["sentences_timestamps"]
-            # except Exception as ex:
-            #     logging.info(f"audio_path {audio_path} has got err {ex} ")
-            #     continue
-                
-                
             words_timestamps = result["chunks"]
             sentences_timestamps = audioWorker.get_sentences_with_timestamps(words_timestamps)
 
@@ -116,7 +101,7 @@ def get_audios_paths(data_path):
 
 
 def read_excel_to_df(file_path,sheet_name = 0):
-    # Чтение Excel файла
+    
     ending = file_path.split(".")[-1]
     if ending == "csv":
         return pd.read_csv(file_path)
@@ -135,46 +120,23 @@ def run(data_paths,excel_paths,sheet_names,result_path,WHISPER_MODEL,CUDA):
         audioWorker = AudioWorker(WHISPER_MODEL,CUDA) 
         print(f"columns in df {excel_path}", df.columns)
         process_audios(audioWorker,audio_paths,df,result_path)
-        logging.info(f"Программа завершила работу")
+        logging.info(f"Finish")
 
 
 if __name__ == "__main__":
-    # mp.set_start_method('spawn', force=True)
+    
     data_paths = [
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/gpt_dataset_ru/Bys_24000",
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/gpt_dataset_ru/May_24000",
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/gpt_dataset_ru/Nec_24000",
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/gpt_dataset_ru/Ost_24000",
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/gpt_dataset_ru/Pon_24000",
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/gpt_dataset_ru/Tur_24000",
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/saluth__mathbridge_eng",
-                # "/home/jovyan/Nikita/TTS_S2L_generation/math_bridge_dima_eng",
-                #  "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/TagMePools/ru",
-                #  "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/TagMePools/eng",
-                # "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/math_bridge_dima_eng"
                 "/workspace-SR006.nfs2/shares/SR006.nfs2/Nikita/speech2latex/TagMePools/eng/pool4_eng"
-                
                 ]
     excel_paths = [
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/math_bridge.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
-                # "/home/jovyan/Nikita/speech2latex/SberSaluth/data/s2l_main_v0_final_fixed.xlsx",
                 "/home/jovyan/Nikita/speech2latex/SberSaluth/data/math_bridge.xlsx",
                     ]
 
     sheet_names = [
-        # 0,
-        # 0
         "truly_checked_new_formulas"
     ]
 
-    assert len(data_paths) == len(excel_paths),f"Не соответствуют пути аудио и excel {len(data_paths)} {len(excel_paths)}"
+    assert len(data_paths) == len(excel_paths)
 
     result_path = "/home/jovyan/Nikita/speech2latex/SberSaluth/whisper_synthesized_audios_final/real/eng"
     WHISPER_MODEL = "large-v3"

@@ -19,7 +19,6 @@ dict_asr = {
     "walm_transcription":[],
     "wav2vec_transcription":[]
 }
-print("размер таблицы",df.shape)
 
 for _,row in tqdm.tqdm(df.iterrows()):
     audio_path = row["audio_path"]
