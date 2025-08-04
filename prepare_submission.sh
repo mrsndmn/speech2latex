@@ -41,6 +41,11 @@ fi
 echo "Sample datasets data"
 python sample_datasets.py
 
+if [ $? -ne 0 ]; then
+    echo "❌ Sample datasets data creation failed!"
+    exit 1
+fi
+
 
 cd ..
 
