@@ -1,4 +1,4 @@
-from datasets import load_dataset, Audio
+from datasets import load_dataset
 from transformers import AutoProcessor, Gemma3nForConditionalGeneration
 from peft import PeftModel
 import torch
@@ -14,7 +14,6 @@ from gemma_utils import (
 
 dataset = load_dataset("csv", data_files="test.csv", split="train")
 dataset = dataset.filter(lambda example: example["language"] == "eng", num_proc=MAX_WORKERS)
-dataset = dataset.cast_column("audio_path", Audio(sampling_rate=16_000))
 
 model = Gemma3nForConditionalGeneration.from_pretrained(
     HF_MODEL_ID, 

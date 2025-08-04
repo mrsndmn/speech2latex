@@ -1,7 +1,7 @@
 from transformers import AutoProcessor, Gemma3nForConditionalGeneration
 from peft import LoraConfig, get_peft_model
 import torch
-from datasets import load_dataset, Audio
+from datasets import load_dataset
 
 from trl import SFTTrainer, SFTConfig
 
@@ -57,7 +57,6 @@ model = get_peft_model(model, peft_config)
 
 dataset = load_dataset("csv", data_files="train.csv")
 dataset = dataset.filter(lambda example: example["language"] == "eng", num_proc=MAX_WORKERS)
-dataset = dataset.cast_column("audio_path", Audio(sampling_rate=16_000))
 dataset = dataset.map(format_intersection_data, batched=True, batch_size=BATCH_SIZE, num_proc=MAX_WORKERS)
 dataset = dataset['train'].train_test_split(test_size=0.1)
 collate_fn = get_collate_fn(processor)
