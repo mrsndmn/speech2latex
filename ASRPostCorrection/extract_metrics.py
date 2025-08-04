@@ -38,7 +38,7 @@ def dump_metrics(metrics):
 
 def process_directories(directories):
     for directory in directories:
-        print(f"\n\n===============\nОбработка директории: {directory}")
+        print(f"\n\n===============\nProcessing directory: {directory}")
         artificial_path = os.path.join(directory, 'artificial_metrics.pickle')
 
         if os.path.exists(artificial_path):
@@ -46,10 +46,10 @@ def process_directories(directories):
             print("artificial_metrics:")
             dump_metrics(artificial_data)
         else:
-            print("Файл artificial_metrics.pickle не найден")
+            print("File artificial_metrics.pickle not found")
 
     for directory in directories:
-        print(f"\n\n===============\nОбработка директории: {directory}")
+        print(f"\n\n===============\nProcessing directory: {directory}")
         humans_path = os.path.join(directory, 'humans_metrics.pickle')
 
         if os.path.exists(humans_path):
@@ -58,7 +58,7 @@ def process_directories(directories):
             dump_metrics(humans_data)
 
         else:
-            print("Файл humans_metrics.pickle не найден")
+            print("File humans_metrics.pickle not found")
 
     return
 
