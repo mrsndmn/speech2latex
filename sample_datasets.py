@@ -1,3 +1,4 @@
+import torchaudio
 
 import os
 from datasets import load_dataset, Audio, Dataset
@@ -12,16 +13,25 @@ if __name__ == "__main__":
     dataset_dict = load_dataset('marsianin500/Speech2Latex', num_proc=32)
 
     for key in dataset_dict.keys():
-        dataset_dict[key] = dataset_dict[key].shuffle(seed=42).select(range(NUM_SAMPLES))
+        os.makedirs(f'./sample_datasets/{key}', exist_ok=True)
+        shuffled_dataset = dataset_dict[key].shuffle(seed=42).select(range(NUM_SAMPLES))
+        for i, item in enumerate(shuffled_dataset):
+            audio_path = item['audio_path']['array']
+            sample_rate = item['audio_path']['sample_rate']
 
-    dataset_dict.save_to_disk(f'./sample_datasets/speech2latex_equations_sentences_{NUM_SAMPLES}_samples')
+            torchaudio.save(f'./sample_datasets/{key}/{i:02d}.wav', audio_path, sample_rate)
+
 
     # MathBridge Cleaned Subset Data
     dataset_dict = load_dataset('marsianin500/Speech2LatexMathBridge', num_proc=32)
 
     for key in dataset_dict.keys():
-        dataset_dict[key] = dataset_dict[key].shuffle(seed=42).select(range(NUM_SAMPLES))
+        shuffled_dataset = dataset_dict[key].shuffle(seed=42).select(range(NUM_SAMPLES))
+        for i, item in enumerate(shuffled_dataset):
+            audio_path = item['audio_path']['array']
+            sample_rate = item['audio_path']['sample_rate']
 
-    dataset_dict.save_to_disk(f'./sample_datasets/speech2latex_mathbridge_{NUM_SAMPLES}_samples')
+            torchaudio.save(f'./sample_datasets/{key}/{i:02d}.wav', audio_path, sample_rate)
+
 
 
