@@ -33,9 +33,12 @@ def decomptress_zst(zst_file_name):
     assert zst_file_name.endswith(".zst")
     decompresssed_file_name = zst_file_name.removesuffix(".zst")
 
+    # Открываем сжатый файл для чтения в бинарном режиме
     with open(zst_file_name, "rb") as compressed_file:
+        # Создаем декомпрессор Zstandard
         decompressor = zstandard.ZstdDecompressor()
 
+        # Разворачиваем поток данных
         with open(decompresssed_file_name, "wb") as output_file:
             decompressor.copy_stream(compressed_file, output_file)
 
@@ -43,30 +46,43 @@ def decomptress_zst(zst_file_name):
 
 
 def convert_latex_to_plain(text):
+    # Удаляем команды \hyperref[...]{...}
     text = re.sub(r'\\hyperref\[.*?\]\{(.*?)\}', r'\1', text)
 
+    # Удаляем команду \textit{...}
     text = re.sub(r'\\textit\{(.*?)\}', r'\1', text)
 
+    # Удаляем команду \textbf{...}
     text = re.sub(r'\\textbf\{(.*?)\}', r'\1', text)
 
+    # Удаляем команду \caption{...}
     text = re.sub(r'\\caption\{(.*?)\}', r'\1', text)
 
+    # Если это цитата, просто удаляем ее
     text = re.sub(r'\\cite\{.*?\}', '', text)
 
+    # Если это цитирование конкретной теоремы, оставляем только название теоремы
     text = re.sub(r'\\cite\[(.*?)\]\{.*?\}', r'\1', text)
 
+    # Удаляем ссылки на лейблы
     text = re.sub(r'\\label\{.*?\}', '', text)
 
+    # Удаляем ссылки
     text = re.sub(r'\\ref\{.*?\}', '', text)
 
+    # Удаляем noindent
     text = re.sub(r'\\noindent', '', text)
 
+    # Разбираем emph
     text = re.sub(r'\\emph\{(.*?)\}', r'\1', text)
 
+    # \eqref меняем на equation
     text = re.sub(r'\\eqref\{.*?\}', 'equation', text)
 
+    # Убираем \item
     text = text.replace('\item', '')
     
+    # Артефакты предыдущих убираний
     text = text.replace('.~()', '')
     
     text = text.strip()
@@ -74,6 +90,7 @@ def convert_latex_to_plain(text):
     return text
 
 def find_inline_math_matches(text):
+    # Регулярное выражение для поиска inline math формул
     inline_math_pattern = r'\$((?:\\\$|[^$])+?)\$'
 
     matches = []

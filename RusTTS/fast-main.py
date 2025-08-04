@@ -7,6 +7,7 @@ from multiprocessing import Pool
 from functools import partial
 from ApiClient import APIClient
 
+# Настройка логирования
 logging.basicConfig(
     filename='fast-main.log',  
     level=logging.INFO,         
@@ -75,7 +76,7 @@ def process_row_by_one_speaker(row, client, result_path, contentType, person,con
     output_file = os.path.join(output_leaf, f"audio_{id}.wav")
 
     if os.path.exists(output_file):
-        log_msg = f"Formula '{formula}' skipped/: {output_file}"
+        log_msg = f"Формула '{formula}' skipped/: {output_file}"
         logging.info(log_msg)
         print(log_msg)
         return 
@@ -85,7 +86,7 @@ def process_row_by_one_speaker(row, client, result_path, contentType, person,con
     if audio_data:
         with open(output_file, 'wb') as file:
             file.write(audio_data)
-        log_msg = f"File {id} {formula} save {output_file}"
+        log_msg = f"Файл {id} {formula} save {output_file}"
         logging.info(log_msg)
         print(log_msg)
 

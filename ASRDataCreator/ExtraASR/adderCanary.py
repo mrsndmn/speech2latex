@@ -16,6 +16,7 @@ df = pd.read_excel(path)
 dict_asr = {
     "canary_transcription":[]
 }
+print("размер таблицы",df.shape)
 
 for _,row in tqdm.tqdm(df.iterrows()):
     audio_path = row["audio_path"]

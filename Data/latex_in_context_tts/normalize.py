@@ -19,6 +19,7 @@ def process_frame(df):
 
 if __name__ == "__main__":
 
+    # Скрипт для многопоточной нормализации latex
     df_reader = pd.read_csv(sys.argv[1], chunksize=10)
 
     output_csv = sys.argv[1]

@@ -13,6 +13,7 @@ df = pd.read_csv(path)
 dict_asr = {
     "qwen_transcription":[],
 }
+print("размер таблицы",df.shape)
 
 # qwen_eng_na = df[(df["language"] == "eng") & (df["qwen_transcription"].isna())]
 
