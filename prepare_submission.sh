@@ -49,3 +49,15 @@ cd ..
 # Create new archive
 rm -rf speech2latex_code_submission.zip
 zip -r speech2latex_code_submission.zip ./speech2latex_code_submission/
+
+# Assert result archive size less 50MB
+FILE_SIZE=$(stat -c%s "speech2latex_code_submission.zip")  # GNU stat (Linux)
+
+MAX_SIZE=$((45 * 1024 * 1024))  # 45MB in bytes
+
+if [ "$FILE_SIZE" -lt "$MAX_SIZE" ]; then
+    echo "✅ Archive size is less than 50MB."
+else
+    echo "❌ Archive size is greater than or equal to 50MB."
+    exit 1  # or handle the error as needed
+fi
