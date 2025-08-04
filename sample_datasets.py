@@ -20,6 +20,9 @@ if __name__ == "__main__":
 
         for language in [ 'eng', 'ru' ]:
 
+            if 'sentence' in key and language == 'ru':
+                continue
+
             shuffled_dataset = shuffled_dataset.filter(lambda x: x['language'] == language)
 
             shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1).select(range(NUM_SAMPLES))
