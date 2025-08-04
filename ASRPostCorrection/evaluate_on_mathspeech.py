@@ -20,7 +20,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str)
     parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--dataset", type=str, default='mrsndmn/MathSpeech_whisper_transcribed', choices=['mrsndmn/MathSpeech_whisper_transcribed', 'mrsndmn/MathSpeech_whisper_transcribed_normalized'])
+    parser.add_argument("--dataset", type=str, default='marsianin500/MathSpeech_whisper_transcribed', choices=['marsianin500/MathSpeech_whisper_transcribed', 'marsianin500/MathSpeech_whisper_transcribed_normalized'])
 
     args = parser.parse_args()
 
@@ -34,8 +34,8 @@ if __name__ == '__main__':
 
     # latex_column = 'LaTeX'
     latex_column = 'latex_normalized'
-    assert args.dataset == 'mrsndmn/MathSpeech_whisper_transcribed_normalized'
-    # if args.dataset == 'mrsndmn/MathSpeech_whisper_transcribed_normalized':
+    assert args.dataset == 'marsianin500/MathSpeech_whisper_transcribed_normalized'
+    # if args.dataset == 'marsianin500/MathSpeech_whisper_transcribed_normalized':
     #     latex_column = 'latex_normalized'
 
     val_dataset = val_dataset.map(lambda x: { latex_column: x[latex_column].removesuffix('$').removeprefix('$') })

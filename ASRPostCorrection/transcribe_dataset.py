@@ -32,4 +32,4 @@ if __name__ == "__main__":
     dataset = dataset.add_column("whisper_text", dataset_transcribtions)
     dataset.save_to_disk("MathSpeech_whisper_transcribed")
 
-    dataset.push_to_hub("mrsndmn/MathSpeech_whisper_transcribed")
+    dataset.push_to_hub("marsianin500/MathSpeech_whisper_transcribed")

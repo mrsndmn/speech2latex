@@ -10,7 +10,7 @@ from process_formula import NormalizeFormula
 
 if __name__ == "__main__":
 
-    hf_ds = load_dataset('mrsndmn/MathSpeech_whisper_transcribed')
+    hf_ds = load_dataset('marsianin500/MathSpeech_whisper_transcribed')
     original_length = len(hf_ds)
 
     def validate_formulas(batch):
