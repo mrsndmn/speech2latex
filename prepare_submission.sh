@@ -18,7 +18,7 @@ echo "Press Enter to continue"
 read -n 1 -s
 grep -Rl tarasov . | xargs rm
 
-rm -rf ASRDataCreator ASR_FT RusTTS EngTTS envs Data/latex_in_context/README.md
+rm -rf ASRDataCreator ASR_FT RusTTS EngTTS envs Data/latex_in_context/README.md Data/latex_in_context_tts/latex_in_context_15k_filtered_with_transcriptions.jsonl Data/our_datasets
 
 find -name .ipynb_checkpoints -type d -exec rm -rf {} +
 
