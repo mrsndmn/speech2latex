@@ -59,5 +59,6 @@ if [ "$FILE_SIZE" -lt "$MAX_SIZE" ]; then
     echo "✅ Archive size is less than 50MB."
 else
     echo "❌ Archive size is greater than or equal to 50MB."
+    du -sh speech2latex_code_submission.zip
     exit 1  # or handle the error as needed
 fi
