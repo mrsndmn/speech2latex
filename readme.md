@@ -3,13 +3,10 @@
 
 ## Gemma for Speech2LaTeX
 
-Open Gemma directory `Multimodal/Gemma`.
-
-This directory contains code for Gemma 3n fine-tuning for Speech2LaTeX task.
 To run this code, create a copy of conda environment from `envs/multimodal/gemma_env.yml` file and activate it.
 
 ```shell
-conda env create -f environment.yml
+conda env create -f envs/multimodal/gemma_env.yml
 conda activate gemma_s2l
 ```
 
@@ -18,7 +15,10 @@ If you encounter problems with PyTorch installation, install it using the follow
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 ```
 
-Then create `train.csv` and `test.csv` files with `audio_path` and `formula_normalized` columns.
+Open Gemma directory `Multimodal/Gemma`.
+This directory contains code for Gemma 3n fine-tuning for Speech2LaTeX task.
+
+Create `train.csv` and `test.csv` files with `audio_path` and `formula_normalized` columns.
 And run scripts:
 
 ```shell
@@ -29,6 +29,52 @@ python gemma_inf.py
 Supports multi GPU training with `torchrun`:
 ```shell
 torchrun --nproc_per_node="3" gemma_ft.py
+```
+
+## SALMONN for Speech2LaTeX
+
+To run this code, create a copy of conda environment from `envs/multimodal/salmonn_env.yml` file and activate it.
+
+```shell
+conda env create -f envs/multimodal/salmonn_env.yml
+conda activate salmonn_s2l
+```
+
+If you encounter problems with PyTorch installation, install it using the following command:
+```shell
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+```
+
+Open SALMONN directory `Multimodal/Salmonn/SALMONN`.
+This directory contains code for SALMONN fine-tuning for Speech2LaTeX task.
+
+You need to download checkpoints for model from original SALMONN repository to the `checkpoints` folder.
+You can look at the example for names in `Multimodal/Salmonn/SALMONN/configs/config.yaml`.
+
+Create `train.csv` and `test.csv` files with `audio_path` and `formula_normalized` columns.
+Convert .csv to .json with `convert_csv_to_json_annot.py`
+```shell
+python convert_csv_to_json_annot.py
+```
+
+You can run training with:
+```shell
+python train.py --cfg-path configs/config.yaml
+```
+Or, if you want to run multi GPU training:
+```shell
+torchrun \
+  --nproc_per_node=3 \
+  --master_port=29700 \
+  train.py \
+  --cfg-path configs/config.yaml
+```
+
+For ineference run:
+```shell
+python inference.py \
+  --cfg-path "./configs/decode_config.yaml" \
+  --test_table "test.csv"
 ```
 
 ## Install dependencies

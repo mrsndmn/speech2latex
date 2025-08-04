@@ -1,5 +1,5 @@
 {
-    "asr": "<Speech><SpeechHere></Speech> Recognize the speech and give me the transcription.",
+    "asr": "<Speech><SpeechHere></Speech> Recognize the speech and convert the content into text. Any mathematical expressions should be transcribed in LaTeX format.",
     "asr_zh": "<Speech><SpeechHere></Speech> 请将语音中的内容写下来。",
     "asr_de": "<Speech><SpeechHere></Speech> Hören Sie sich die Rede an und schreiben Sie ihren Inhalt auf.",
     "translation_ec": "<Speech><SpeechHere></Speech> Listen to the speech and translate it into Chinese.",

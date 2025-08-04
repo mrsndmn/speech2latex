@@ -14,7 +14,23 @@
         "<Speech><SpeechHere></Speech> Recognize the speech and write it down in a written format.",
         "<Speech><SpeechHere></Speech> Listen to the speech and recognize its content.",
         "<Speech><SpeechHere></Speech> Give me the transcription of the speech you heard.",
-        "<Speech><SpeechHere></Speech> Recognize the speech and give me the transcription."
+        "<Speech><SpeechHere></Speech> Recognize the speech and give me the transcription.",
+
+        "<Speech><SpeechHere></Speech> Transcribe the speech into text and format any mathematical expressions as LaTeX formulas.",
+        "<Speech><SpeechHere></Speech> Convert the spoken words into written text. For mathematical expressions, use LaTeX format.",
+        "<Speech><SpeechHere></Speech> Write down the speech and ensure that all equations are correctly formatted in LaTeX.",
+        "<Speech><SpeechHere></Speech> Please transcribe the spoken content. Represent any mathematical expressions using LaTeX.",
+        "<Speech><SpeechHere></Speech> Listen to the speech and convert it to text. Any formulas should be written in LaTeX notation.",
+        "<Speech><SpeechHere></Speech> Convert the speech to written text, ensuring that all math equations are formatted in LaTeX.",
+        "<Speech><SpeechHere></Speech> Transcribe the speech, paying attention to mathematical expressions. Write them in LaTeX format.",
+        "<Speech><SpeechHere></Speech> Listen to the audio and convert it to text. Mathematical parts must be written in LaTeX.",
+        "<Speech><SpeechHere></Speech> Write down the content of the speech and ensure that all mathematical formulas are written using LaTeX syntax.",
+        "<Speech><SpeechHere></Speech> Convert this speech to text and represent any equations or formulas using LaTeX.",
+        "<Speech><SpeechHere></Speech> Please transcribe the speech. For mathematical expressions, format them in LaTeX.",
+        "<Speech><SpeechHere></Speech> Transcribe the speech and use LaTeX to represent all mathematical expressions accurately.",
+        "<Speech><SpeechHere></Speech> Convert the speech to written format. Make sure that any mathematical terms are written in LaTeX.",
+        "<Speech><SpeechHere></Speech> Write down the speech content, making sure all mathematical expressions are in LaTeX.",
+        "<Speech><SpeechHere></Speech> Please transcribe the spoken words, and format any mathematical equations using LaTeX."
     ],
     "asr_zh": [
         "<Speech><SpeechHere></Speech> 前面的语音说了什么？",

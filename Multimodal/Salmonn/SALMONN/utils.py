@@ -138,9 +138,8 @@ class IterLoader:
 
 
 def prepare_one_sample(wav_path, wav_processor, cuda_enabled=True):
-    # audio, sr = sf.read(wav_path)
-    audio = wav_path['array']
-    sr = wav_path['sampling_rate']
+    audio, sr = sf.read(wav_path)
+
     if len(audio.shape) == 2: # stereo to mono
         audio = audio[:, 0]
     if len(audio) < sr: # pad audio to at least 1s
