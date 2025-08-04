@@ -1,4 +1,5 @@
 import pandas as pd
+import torch
 from TTS.api import TTS
 import os
 from tqdm.auto import tqdm
@@ -69,17 +70,18 @@ if ext in ["csv"] :
 elif ext in ["jsonl"]:
     reader_func = read_json_by_row
 
-device = "cuda:0"
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
 tts = TTS(model_name="tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+tts = torch.compile(tts, mode="reduce-overhead", dynamic=True, fullgraph=True)
 
 output_dir = 'tts'
 os.makedirs(output_dir, exist_ok=True)
 
 for text, output_file, lang in reader_func(path, output_dir):
     try:
-        tts.tts_to_file(text=text, file_path=output_file, speaker_wav='./g300.wav', language=lang)
+        with torch.inference_mode():
+            tts.tts_to_file(text=text, file_path=output_file, speaker_wav='./g300.wav', language=lang)
     except Exception as ex:
-        raise ex
         path_err = "./err.txt"
         with open(path_err, "a+") as file:
             file.write(f"{text}, {output_file}\n")

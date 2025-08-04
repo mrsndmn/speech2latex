@@ -77,7 +77,7 @@ python inference.py \
   --test_table "test.csv"
 ```
 
-## Install dependencies
+## Install dependencies for formula normalization
 
 ```
 pip install -r requirements.txt
@@ -86,21 +86,21 @@ pip install -r requirements.txt
 
 ## ASRPostCorrection
 
-## Training
+### Training
 
 ```
 cd ASRPostCorrection
 PYTHONPATH=. python -m pdb -c continue train_qwen.py --config ./config-qwen2.5-in_context_training.json --train_df ../Data/latex_in_context_tts/latex_in_context_tts_v2_train.csv --val_df ../Data/latex_in_context_tts/latex_in_context_tts_v2_test.csv
 ```
 
-## Testing trained model
+### Testing trained model
 
 ```
 cd ASRPostCorrection
 python test_qwen.py --cuda 0 --test_file_csv ../Data/latex_in_context_tts/latex_in_context_tts_v2_test.csv --batch_size 20 --ckpt ./ckpts/tts-in-context/version_9/
 ```
 
-## Evaluation
+### Evaluation
 
 Its also possible to compute metrics from file without model.
 
@@ -115,4 +115,16 @@ in_context_metrics.dump(metrics_values)
 Example CLI-usage:
 ```
 python src/s2l/eval.py --csv-data ./Data/latex_in_context_tts/latex_in_context_tts_v2_train.csv --pred-column model_prediction --target-column target_text
+```
+
+## Pronunciation generation
+To generate pronunciation with xTTS v2 model, you can create an environment with `envs/tts/tts_env.yml`
+```shell
+conda env create -f envs/tts/tts_env.yml
+conda activate tts_s2l
+```
+Then create an .csv or .jsonl files with `id`, `pronunciation` and `language` columns.
+Set `path` and `output_dir` in `EngTTS/tts.py` and run the script:
+```shell
+python EngTTS/tts.py
 ```
