@@ -33,12 +33,9 @@ def decomptress_zst(zst_file_name):
     assert zst_file_name.endswith(".zst")
     decompresssed_file_name = zst_file_name.removesuffix(".zst")
 
-    # Открываем сжатый файл для чтения в бинарном режиме
     with open(zst_file_name, "rb") as compressed_file:
-        # Создаем декомпрессор Zstandard
         decompressor = zstandard.ZstdDecompressor()
 
-        # Разворачиваем поток данных
         with open(decompresssed_file_name, "wb") as output_file:
             decompressor.copy_stream(compressed_file, output_file)
 
@@ -46,43 +43,30 @@ def decomptress_zst(zst_file_name):
 
 
 def convert_latex_to_plain(text):
-    # Удаляем команды \hyperref[...]{...}
     text = re.sub(r'\\hyperref\[.*?\]\{(.*?)\}', r'\1', text)
 
-    # Удаляем команду \textit{...}
     text = re.sub(r'\\textit\{(.*?)\}', r'\1', text)
 
-    # Удаляем команду \textbf{...}
     text = re.sub(r'\\textbf\{(.*?)\}', r'\1', text)
 
-    # Удаляем команду \caption{...}
     text = re.sub(r'\\caption\{(.*?)\}', r'\1', text)
 
-    # Если это цитата, просто удаляем ее
     text = re.sub(r'\\cite\{.*?\}', '', text)
 
-    # Если это цитирование конкретной теоремы, оставляем только название теоремы
     text = re.sub(r'\\cite\[(.*?)\]\{.*?\}', r'\1', text)
 
-    # Удаляем ссылки на лейблы
     text = re.sub(r'\\label\{.*?\}', '', text)
 
-    # Удаляем ссылки
     text = re.sub(r'\\ref\{.*?\}', '', text)
 
-    # Удаляем noindent
     text = re.sub(r'\\noindent', '', text)
 
-    # Разбираем emph
     text = re.sub(r'\\emph\{(.*?)\}', r'\1', text)
 
-    # \eqref меняем на equation
     text = re.sub(r'\\eqref\{.*?\}', 'equation', text)
 
-    # Убираем \item
     text = text.replace('\item', '')
     
-    # Артефакты предыдущих убираний
     text = text.replace('.~()', '')
     
     text = text.strip()
@@ -90,12 +74,10 @@ def convert_latex_to_plain(text):
     return text
 
 def find_inline_math_matches(text):
-    # Регулярное выражение для поиска inline math формул
     inline_math_pattern = r'\$((?:\\\$|[^$])+?)\$'
 
     matches = []
     for m in re.finditer(inline_math_pattern, text):
-        # start_i, end_i, full_match (with $$), formula body (without $$)
         matches.append((m.start(0), m.end(0), m.group(0), m.group(1)))
 
     return matches
@@ -110,11 +92,9 @@ def check_unknown_commands(in_context_math_data):
     unknown_command_matches = re.findall(r'\\([a-zA-Z]+)', text_no_inline_math)
 
     if '$' in text_no_inline_math:
-        # print(f"FOUND unmatched inline math: {text_no_inline_math}\n orig: {in_context_math_data['text']}")
         return True
 
     if len(unknown_command_matches) > 0:
-        # print(f"FOUND UNKNOWN COMMAND {unknown_command_matches}: {text_no_inline_math}\n orig: {in_context_math_data['text']}")
         return True
 
     return False
@@ -211,9 +191,6 @@ def process_one_shard(shard_i):
     
     zst_file_output = f"ext_data/arXiv_{shard_i:03}.jsonl.zst"
     formulas_file_name = f'data/formulas_{shard_i:03}.jsonl'
-    # if os.path.exists(formulas_file_name):
-    #     print(f"File shard {shard_i} already exsits:", formulas_file_name)
-    #     return
 
     if not os.path.exists(zst_file_output):
         url = f'https://huggingface.co/datasets/EleutherAI/proof-pile-2/resolve/main/arxiv/train/arXiv_{shard_i:03}.jsonl.zst'

@@ -7,8 +7,7 @@ from ASRPostCorrection.chat_template_with_generation import CHAT_TEMPLATE_WITH_G
 
 def test_dataset_tokenizer():
 
-    s2l_dataset = datasets.Dataset.load_from_disk("/workspace-SR004.nfs2/d.tarasov/rsi-speech2latex/Data/trainable_split/equations_dev_new/")
-    # normalized_formulas = pd.read_csv("/workspace-SR004.nfs2/d.tarasov/rsi-speech2latex/Data/trainable_split/normalized_formulas.csv")
+    s2l_dataset = datasets.Dataset.load_from_disk("../../Data/trainable_split/equations_dev_new/")
 
     s2l_dataset_item1 = s2l_dataset[0]
     s2l_dataset_item2 = s2l_dataset[1]
