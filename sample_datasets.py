@@ -16,13 +16,17 @@ if __name__ == "__main__":
     for key in dataset_dict.keys():
         os.makedirs(f'./sample_datasets/{key}', exist_ok=True)
 
-        shuffled_dataset = dataset_dict[key].shuffle(seed=42).select(range(min(10000, len(dataset_dict[key]))))
+        shuffled_dataset = dataset_dict[key]
 
         for language in [ 'eng', 'ru' ]:
 
             shuffled_dataset = shuffled_dataset.filter(lambda x: x['language'] == language)
+
             shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1).select(range(NUM_SAMPLES))
             shuffled_dataset_human = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 0).select(range(NUM_SAMPLES))
+
+            assert len(shuffled_dataset_tts) == NUM_SAMPLES
+            assert len(shuffled_dataset_human) == NUM_SAMPLES
 
             for i, item in enumerate(shuffled_dataset_tts):
                 audio_path = item['audio_path']['array']
