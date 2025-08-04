@@ -1,6 +1,6 @@
 
 rm -rf ./supplemetnary/ supplemetnary.zip
-mkdir -p ./supplemetnary/{source_code,dataset_samples}/
+mkdir -p ./supplemetnary/{source_code,sample_datasets}/
 
 cp -r .git ./supplemetnary/source_code/.git
 

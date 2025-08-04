@@ -37,4 +37,4 @@ config-qwen2.5-1.5B-test.json
 ckpts_few_shot
 supplemetnary
 supplemetnary.zip
-dataset_samples/
+sample_datasets/
