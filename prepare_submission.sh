@@ -15,8 +15,10 @@ rm -rf .git/ prepare_submission.sh
 
 echo "Following files will be deleted:"
 grep -Rl tarasov .
-echo "Press Enter to continue"
-read -n 1 -s
+# echo "Press Enter to continue"
+# read -n 1 -s
+
+
 grep -Rl tarasov . | xargs rm
 
 rm -rf ASRDataCreator ASR_FT RusTTS EngTTS Data/latex_in_context/README.md Data/latex_in_context_tts/latex_in_context_15k_filtered_with_transcriptions.jsonl Data/our_datasets requirements.txt
