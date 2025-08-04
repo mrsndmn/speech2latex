@@ -21,8 +21,8 @@ if __name__ == "__main__":
         for language in [ 'eng', 'ru' ]:
 
             shuffled_dataset = shuffled_dataset.filter(lambda x: x['language'] == language)
-            shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1)
-            shuffled_dataset_human = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 0)
+            shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1).select(range(NUM_SAMPLES))
+            shuffled_dataset_human = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 0).select(range(NUM_SAMPLES))
 
             for i, item in enumerate(shuffled_dataset_tts):
                 audio_path = item['audio_path']['array']
