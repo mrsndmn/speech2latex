@@ -19,7 +19,7 @@ read -n 1 -s
 grep -Rl tarasov . | xargs rm
 
 
-if ! grep -Ri 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|rsi' . | grep -q .; then
+if ! grep -Ri 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|rsi|[а-я]' . |  grep -v 'TeXBLEU/tokenizer.json' |  grep -q .; then
     echo "✅ No matching deanon substrings found."
 else
     echo "❌ Matching deanon substrings found!"
