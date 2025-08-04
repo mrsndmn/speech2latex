@@ -1,27 +1,20 @@
 from datasets import load_dataset, Audio
-from transformers import AutoProcessor, Gemma3nForConditionalGeneration, TextStreamer
+from transformers import AutoProcessor, Gemma3nForConditionalGeneration
 from peft import PeftModel
 import torch
-
-import random
+import soundfile as sf
+from tqdm import tqdm
+import pandas as pd
 
 from gemma_utils import (
     HF_MODEL_ID,
-    HF_DATASET_ID,
     HF_CACHE_DIR,
-    DATASET_SPLIT,
-    MAX_WORKERS,
+    MAX_WORKERS
 )
 
-dataset = load_dataset(
-    HF_DATASET_ID,
-    split=DATASET_SPLIT + "[:10]",
-    cache_dir=HF_CACHE_DIR,
-    num_proc=MAX_WORKERS,
-)
+dataset = load_dataset("csv", data_files="test.csv", split="train")
 dataset = dataset.filter(lambda example: example["language"] == "eng", num_proc=MAX_WORKERS)
 dataset = dataset.cast_column("audio_path", Audio(sampling_rate=16_000))
-test_audio = random.choice(dataset)
 
 model = Gemma3nForConditionalGeneration.from_pretrained(
     HF_MODEL_ID, 
@@ -39,38 +32,59 @@ processor = AutoProcessor.from_pretrained(
 model = PeftModel.from_pretrained(model, "gemma-3n")
 model.eval()
 
-messages = [
-    {
-        "role": "system",
-        "content": [
-            {
-                "type": "text",
-                "text": "You are an assistant that transcribes speech accurately.",
-            }
-        ],
-    },
-    {
-        "role": "user",
-        "content": [
-            {"type": "audio", "audio": test_audio['audio_path']['array']},
-            {"type": "text", "text": "Please transcribe this audio."}
-        ]
-    }
-]
+# merge LoRA adapters for faster inference
+model = model.merge_and_unload()
+model = torch.compile(model, mode="reduce-overhead")
 
-inputs = processor.apply_chat_template(
-    messages,
-    add_generation_prompt = True,
-    return_tensors = "pt",
-    tokenize = True,
-    return_dict = True,
-).to(model.device, torch.bfloat16)
+answers = []
 
-_ = model.generate(
-    **inputs,
-    max_new_tokens = 256,
-    temperature = 1.0, top_p = 0.95, top_k = 64,
-    streamer = TextStreamer(processor, skip_prompt = True),
-    use_cache=False
-)
-print(test_audio)
+for data in tqdm(dataset):
+    audio, _ = sf.read(data["audio_path"])
+
+    messages = [
+        {
+            "role": "system",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "You are an assistant that transcribes speech with formulas accurately into latex code.\n\nExamples:\nSpeech: x plus y squared equal z.\nYour answer: x + y^{2} = z\n\nSpeech: e to the power of a equals b over two.\nYour answer: e^{a} = \\frac{b}{2}",
+                }
+            ],
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "audio", "audio": audio},
+                {"type": "text", "text": "Please transcribe this audio."}
+            ]
+        }
+    ]
+    inputs = processor.apply_chat_template(
+        messages,
+        add_generation_prompt = True,
+        return_tensors = "pt",
+        tokenize = True,
+        return_dict = True,
+    ).to(model.device, model.dtype)
+
+    with torch.inference_mode():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens = 256,
+            temperature = 1.0, top_p = 0.95, top_k = 64,
+            use_cache=False
+        )
+
+    text = processor.batch_decode(
+        outputs,
+        skip_special_tokens=True,
+        skip_prompt=True,
+        clean_up_tokenization_spaces=False
+    )[0][286:] # skip system prompt
+
+    answers.append(text.strip())
+
+df = pd.read_csv("test.csv")
+df = df[df["language"] == "eng"]
+df["preds"] = answers
+df.to_csv("output_eng.csv", index=False)

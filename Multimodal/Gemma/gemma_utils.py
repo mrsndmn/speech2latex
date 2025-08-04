@@ -1,5 +1,6 @@
 from typing import Final
 from transformers import TextStreamer
+import soundfile as sf
 
 HF_MODEL_ID: Final = "google/gemma-3n-E2B-it"
 HF_DATASET_ID: Final = "marsianin500/Speech2Latex"
@@ -9,18 +10,18 @@ MAX_WORKERS: Final = 8
 LORA_R: Final = 16
 LORA_ALPHA: Final = 32
 LORA_DROPOUT: Final = 0.3
-OUTPUT_DIR: Final = "./outputs/gemma-3n-E2B-it-trl-sft"
+OUTPUT_DIR: Final = "./outputs/gemma-3n"
 BATCH_SIZE: Final = 8
 GRADIENT_ACCUMULATION_STEPS: Final = 8
 LR: Final = 4e-05
-NUM_EPOCHS: Final = 2
+NUM_EPOCHS: Final = 3
 
 def format_intersection_data(samples: dict) -> dict[str, list]:
     """Format intersection dataset to match expected message format"""
     formatted_samples = {"messages": []}
     for idx in range(len(samples["audio_path"])):
-        audio = samples["audio_path"][idx]["array"]
-        label = str(samples["sentence_normalized"][idx])
+        audio, _ = sf.read(samples["audio_path"][idx])
+        label = str(samples["formula_normalized"][idx])
 
         message = [
             {
@@ -60,7 +61,8 @@ def get_collate_fn(processor):
             texts.append(text)
 
             # Extract audios
-            audios.append(example["audio_path"]["array"])
+            array, _ = sf.read(example["audio_path"])
+            audios.append(array)
 
         # Tokenize the texts and process the images
         batch = processor(
@@ -84,7 +86,7 @@ def get_collate_fn(processor):
 
         batch["labels"] = labels
         return batch
-    return get_collate_fn
+    return collate_fn
 
 # Helper function for inference
 def do_gemma_3n_inference(model, processor, messages, max_new_tokens = 128):

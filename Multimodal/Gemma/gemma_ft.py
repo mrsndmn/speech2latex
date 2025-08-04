@@ -1,4 +1,3 @@
-# from unsloth import FastModel
 from transformers import AutoProcessor, Gemma3nForConditionalGeneration
 from peft import LoraConfig, get_peft_model
 import torch
@@ -10,9 +9,7 @@ from gemma_utils import (
     format_intersection_data,
     get_collate_fn,
     HF_MODEL_ID,
-    HF_DATASET_ID,
     HF_CACHE_DIR,
-    DATASET_SPLIT,
     MAX_WORKERS,
     LORA_R,
     LORA_ALPHA,
@@ -55,29 +52,20 @@ peft_config = LoraConfig(
     bias="none",
     use_rslora=False,
     use_dora=False,
-    # modules_to_save=[
-    #     "lm_head",
-    #     "embed_tokens",
-    #     "embed_audio",
-    # ],
 )
 model = get_peft_model(model, peft_config)
 
-
-dataset = load_dataset(
-    HF_DATASET_ID,
-    split=DATASET_SPLIT + "[:10000]",
-    cache_dir=HF_CACHE_DIR,
-    num_proc=MAX_WORKERS,
-)
+dataset = load_dataset("csv", data_files="train.csv")
 dataset = dataset.filter(lambda example: example["language"] == "eng", num_proc=MAX_WORKERS)
 dataset = dataset.cast_column("audio_path", Audio(sampling_rate=16_000))
 dataset = dataset.map(format_intersection_data, batched=True, batch_size=BATCH_SIZE, num_proc=MAX_WORKERS)
+dataset = dataset['train'].train_test_split(test_size=0.1)
 collate_fn = get_collate_fn(processor)
 
 trainer = SFTTrainer(
     model=model,
-    train_dataset=dataset,
+    train_dataset=dataset["train"],
+    eval_dataset=dataset["test"],
     processing_class=processor.tokenizer,
     data_collator=collate_fn,
     args = SFTConfig(
@@ -85,18 +73,22 @@ trainer = SFTTrainer(
         gradient_accumulation_steps = GRADIENT_ACCUMULATION_STEPS,
         gradient_checkpointing_kwargs = {"use_reentrant": False},
         warmup_ratio = 0.1,
-        num_train_epochs = NUM_EPOCHS,
         learning_rate = LR,
-        logging_steps = 10,
-        save_strategy="steps",
         optim = "adamw_torch_fused",
         weight_decay = 0.01,
         lr_scheduler_type = "cosine",
+
+        num_train_epochs = NUM_EPOCHS,
+        logging_steps = 250,
+        save_steps=250,
+        save_total_limit=3,
+        save_strategy="steps",
+
         seed = 42,
         output_dir = OUTPUT_DIR,
         report_to = "none",
 
-        # You MUST put the below items for audio finetuning:
+        # items for audio fine-tuning
         remove_unused_columns = False,
         dataset_text_field = "",
         dataset_kwargs = {"skip_prepare_dataset": True},
@@ -109,5 +101,7 @@ trainer = SFTTrainer(
 )
 
 trainer.train()
+
+# save adapters
 model.save_pretrained("gemma-3n")
 processor.save_pretrained("gemma-3n")

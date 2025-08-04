@@ -1,14 +1,44 @@
-# RSI-Speech2Latex
+# Speech2Latex
 
 
-# Install dependencies
+## Gemma for Speech2LaTeX
+
+Open Gemma directory `Multimodal/Gemma`.
+
+This directory contains code for Gemma 3n fine-tuning for Speech2LaTeX task.
+To run this code, create a copy of conda environment from `envs/multimodal/gemma_env.yml` file and activate it.
+
+```shell
+conda env create -f environment.yml
+conda activate gemma_s2l
+```
+
+If you encounter problems with PyTorch installation, install it using the following command:
+```shell
+pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+```
+
+Then create `train.csv` and `test.csv` files with `audio_path` and `formula_normalized` columns.
+And run scripts:
+
+```shell
+python gemma_ft.py
+python gemma_inf.py
+```
+
+Supports multi GPU training with `torchrun`:
+```shell
+torchrun --nproc_per_node="3" gemma_ft.py
+```
+
+## Install dependencies
 
 ```
 pip install -r requirements.txt
 ```
 
 
-# ASRPostCorrection
+## ASRPostCorrection
 
 ## Training
 
