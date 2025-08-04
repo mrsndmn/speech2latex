@@ -16,9 +16,10 @@ if __name__ == "__main__":
     for key in dataset_dict.keys():
         os.makedirs(f'./sample_datasets/{key}', exist_ok=True)
 
+        shuffled_dataset = dataset_dict[key].shuffle(seed=42).select(range(min(10000, len(dataset_dict[key]))))
+
         for language in [ 'eng', 'ru' ]:
 
-            shuffled_dataset = dataset_dict[key].shuffle(seed=42).select(range(10000))
             shuffled_dataset = shuffled_dataset.filter(lambda x: x['language'] == language)
             shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1)
             shuffled_dataset_human = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 0)
