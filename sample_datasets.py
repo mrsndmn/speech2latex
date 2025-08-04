@@ -6,7 +6,7 @@ from datasets import load_dataset, Audio, Dataset
 
 if __name__ == "__main__":
 
-    NUM_SAMPLES = 10
+    NUM_SAMPLES = 5
 
     # Speech2Latex Equations and Sentences
     os.makedirs('./sample_datasets', exist_ok=True)
