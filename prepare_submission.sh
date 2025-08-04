@@ -36,7 +36,15 @@ else
     echo "❌ Matching deanon files found!"
     exit 1  # or handle as needed
 fi
+
+
+echo "Sample datasets data"
+python sample_datasets.py
+
+
 cd ..
+
+
 
 # Create new archive
 rm -rf speech2latex_code_submission.zip
