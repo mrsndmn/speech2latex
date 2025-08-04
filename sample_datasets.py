@@ -25,13 +25,13 @@ if __name__ == "__main__":
 
             print(f'Processing {key} for {language}')
 
-            shuffled_dataset = shuffled_dataset.filter(lambda x: x['language'] == language, num_proc=32)
+            shuffled_dataset_lang = shuffled_dataset.filter(lambda x: x['language'] == language, num_proc=32)
 
-            shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1, num_proc=32).select(range(NUM_SAMPLES))
-            shuffled_dataset_human = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 0, num_proc=32).select(range(NUM_SAMPLES))
+            shuffled_dataset_tts = shuffled_dataset_lang.filter(lambda x: int(x['is_tts']) == 1, num_proc=32).select(range(NUM_SAMPLES))
+            assert len(shuffled_dataset_tts) == NUM_SAMPLES, f"Expected {NUM_SAMPLES} samples, got {len(shuffled_dataset_tts)}"
 
-            assert len(shuffled_dataset_tts) == NUM_SAMPLES
-            assert len(shuffled_dataset_human) == NUM_SAMPLES
+            shuffled_dataset_human = shuffled_dataset_lang.filter(lambda x: int(x['is_tts']) == 0, num_proc=32).select(range(NUM_SAMPLES))
+            assert len(shuffled_dataset_human) == NUM_SAMPLES, f"Expected {NUM_SAMPLES} samples, got {len(shuffled_dataset_human)}"
 
             for i, item in enumerate(shuffled_dataset_tts):
                 audio_path = item['audio_path']['array']
