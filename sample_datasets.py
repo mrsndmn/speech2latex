@@ -23,10 +23,12 @@ if __name__ == "__main__":
             if 'sentence' in key and language == 'ru':
                 continue
 
-            shuffled_dataset = shuffled_dataset.filter(lambda x: x['language'] == language)
+            print(f'Processing {key} for {language}')
 
-            shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1).select(range(NUM_SAMPLES))
-            shuffled_dataset_human = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 0).select(range(NUM_SAMPLES))
+            shuffled_dataset = shuffled_dataset.filter(lambda x: x['language'] == language, num_proc=32)
+
+            shuffled_dataset_tts = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 1, num_proc=32).select(range(NUM_SAMPLES))
+            shuffled_dataset_human = shuffled_dataset.filter(lambda x: int(x['is_tts']) == 0, num_proc=32).select(range(NUM_SAMPLES))
 
             assert len(shuffled_dataset_tts) == NUM_SAMPLES
             assert len(shuffled_dataset_human) == NUM_SAMPLES
