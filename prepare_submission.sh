@@ -1,6 +1,6 @@
 
 rm -rf ./supplemetnary/ supplemetnary.zip
-mkdir -p ./supplemetnary/{source_code,sample_datasets}/
+mkdir -p ./supplemetnary/source_code/
 
 cp -r .git ./supplemetnary/source_code/.git
 
@@ -49,7 +49,7 @@ fi
 
 rm sample_datasets.py
 
-mv ./sample_datasets ../sample_datasets
+mv ./sample_datasets ../
 mv ./Speech2Latex_APPENDIX.pdf ../
 
 cd ../../
