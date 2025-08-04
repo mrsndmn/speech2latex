@@ -3,9 +3,7 @@ from transformers import TextStreamer
 import soundfile as sf
 
 HF_MODEL_ID: Final = "google/gemma-3n-E2B-it"
-HF_DATASET_ID: Final = "marsianin500/Speech2Latex"
 HF_CACHE_DIR: Final = "./cache"
-DATASET_SPLIT: Final = "equations_train"
 MAX_WORKERS: Final = 8
 LORA_R: Final = 16
 LORA_ALPHA: Final = 32
