@@ -18,6 +18,20 @@ echo "Press Enter to continue"
 read -n 1 -s
 grep -Rl tarasov . | xargs rm
 
+
+if ! grep -Ri 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|rsi' . | grep -q .; then
+    echo "✅ No matching deanon substrings found."
+else
+    echo "❌ Matching deanon substrings found!"
+    exit 1  # or handle as needed
+fi
+
+if ! find . -type f -regex '.*/\(sber\|Nikita\|korzh\|iudin\|karimov\|elvir\|tarasov\|rsi\).*' | grep -q .; then
+    echo "✅ No matching deanon files found."
+else
+    echo "❌ Matching deanon files found!"
+    exit 1  # or handle as needed
+fi
 cd ..
 
 # Create new archive
