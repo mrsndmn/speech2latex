@@ -19,21 +19,6 @@ from torch.nn.utils.rnn import pad_sequence
 import soundfile as sf
 import numpy as np
 from transformers import WhisperFeatureExtractor
-from torch_audiomentations import (
-    # AddBackgroundNoise,
-    # ApplyImpulseResponse,
-    Compose,
-    Gain,
-    LowPassFilter,
-    PitchShift,
-    HighPassFilter,
-    TimeStretch,
-    BitCrush,
-    TimeMask,
-    LoudnessNormalization,
-    BandPassFilter,
-    AddGaussianNoise,
-)
 
 
 
@@ -43,26 +28,7 @@ class SALMONNDataset(Dataset):
 
         self.annotation = json.load(open(ann_path, "r"))["annotation"]
 
-        self.wav_processor = WhisperFeatureExtractor.from_pretrained(whisper_path)
-        
-        # self.augmentations = lambda x: x
-        self.augmentations = Compose(
-            transforms=[
-                Gain(p=0.1, min_gain_db=-5.0, max_gain_db=5.0),
-                PitchShift(p=0.2),
-                LowPassFilter(p=0.15, min_cutoff_freq=3400, max_cutoff_freq=7500),
-                HighPassFilter(p=0.15, min_cutoff_freq=100, max_cutoff_freq=400),
-                TimeStretch(p=0.2),
-                BitCrush(p=0.2, min_bit_depth=5, max_bit_depth=14),
-                TimeMask(p=0.1),
-                LoudnessNormalization(p=0.2),
-                BandPassFilter(p=0.15),
-                AddGaussianNoise(p=0.15),
-            ],
-            p=0.5,
-            shuffle=True,
-        )
- 
+        self.wav_processor = WhisperFeatureExtractor.from_pretrained(whisper_path) 
 
     def __len__(self):
         return len(self.annotation)
@@ -97,7 +63,7 @@ class SALMONNDataset(Dataset):
         audio, sr = sf.read(ann["path"])
         if len(audio.shape) == 2: # stereo to mono
             audio = audio[:, 0]
-        audio = self.augmentations(audio)
+
         if "expand_wav" in ann:
             for p in ann["expand_wav"]:
                 expand_audio, _ = sf.read(p)

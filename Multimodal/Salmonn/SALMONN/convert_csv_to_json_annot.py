@@ -1,23 +1,43 @@
 
 import pandas as pd
 import json
-import os
-from glob import glob
-from pathlib import Path
 
-mathbridge_audios = list(glob("Data/mathbridge/wavs/*.wav"))
-df = pd.read_csv("Data/mathbridge/MathBridge_train_cleaned_normalized_train.csv")
+df = pd.read_csv("train.csv")
+df = df[df["language"] == "eng"]
+
+df_shuffled = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+
+# Split the shuffled DataFrame
+train_size = int(0.9 * len(df_shuffled))
+train_df = df_shuffled[:train_size]
+val_df = df_shuffled[train_size:]
 
 def write( path,dict):
     with open(path, "w+") as f:
         f.write(json.dumps(dict,indent=4))
 
-
-path = "./Data/mathbridge"
-
 train_anno = {
-    "annotation":[ {"path":audio_path, "text":df.iloc[int(Path(audio_path).stem)]['formula_normalized_2'], "task" : "asr" } for audio_path in mathbridge_audios]
+    "annotation":[ {"path":row['audio_path'], "text":row['formula_normalized'], "task" : "asr" } for _, row in train_df.iterrows()]
+}
+
+val_anno = {
+    "annotation":[ {"path":row['audio_path'], "text":row['formula_normalized'], "task" : "asr" } for _, row in val_df.iterrows()]
 }
 
 
-write(os.path.join(path,"train_anno.json"),train_anno)
+write("data/train_anno.json",train_anno)
+write("data/val_anno.json",val_anno)
+
+df = pd.read_csv("train.csv")
+test_df = df[df["language"] == "eng"]
+
+def write( path,dict):
+    with open(path, "w+") as f:
+        f.write(json.dumps(dict,indent=4))
+
+test_anno = {
+    "annotation":[ {"path":row['audio_path'], "text":row['formula_normalized'], "task" : "asr" } for _, row in test_df.iterrows()]
+}
+
+write("data/test_anno.json",test_anno)
