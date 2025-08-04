@@ -1,4 +1,4 @@
-# RSI-Speech2Latex
+# Speech2Latex
 
 
 # Install dependencies
