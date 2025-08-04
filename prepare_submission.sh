@@ -1,5 +1,5 @@
 
-rm -rf ./speech2latex_code_submission/
+rm -rf ./speech2latex_code_submission/ speech2latex_code_submission.zip
 mkdir -p ./speech2latex_code_submission/
 cp -r .git ./speech2latex_code_submission/.git
 
