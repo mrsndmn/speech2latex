@@ -18,10 +18,14 @@ echo "Press Enter to continue"
 read -n 1 -s
 grep -Rl tarasov . | xargs rm
 
+rm -rf ASRDataCreator ASR_FT RusTTS EngTTS envs
 
-if ! grep -Ri 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|rsi|[а-я]' . |  grep -v 'TeXBLEU/tokenizer.json' |  grep -q .; then
+find -name .ipynb_checkpoints -type d -exec rm -rf {} +
+
+if ! grep --binary-files=without-match -PRi 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|\brsi\b|[а-яА-ЯёЁ]' . |  grep -v 'TeXBLEU/tokenizer.json\|TeXBLEU/new_embeddings.pth' |  grep -q .; then
     echo "✅ No matching deanon substrings found."
 else
+    grep --binary-files=without-match -PRi 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|\brsi\b|[а-яА-ЯёЁ]' . |  grep -v 'TeXBLEU/tokenizer.json\|TeXBLEU/new_embeddings.pth' | head
     echo "❌ Matching deanon substrings found!"
     exit 1  # or handle as needed
 fi
