@@ -87,7 +87,7 @@ def register_datasets_mixtures():
     data_mixture_1 = Dataset(
         dataset_name="data_mixture_1",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3.json',
     )
     add_dataset(data_mixture_1)
 
@@ -95,21 +95,21 @@ def register_datasets_mixtures():
     data_mixture_2 = Dataset(
         dataset_name="mix_eng",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_mix_eng.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_mix_eng.json',
     )
     add_dataset(data_mixture_2)
 
     data_mixture_3 = Dataset(
         dataset_name="mix_ru",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_mix_ru.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_mix_ru.json',
     )
     add_dataset(data_mixture_3)
 
     data_mixture_4 = Dataset(
         dataset_name="human_multilingual",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_human_multilingual.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_human_multilingual.json',
     )
     add_dataset(data_mixture_4)
 
@@ -117,14 +117,14 @@ def register_datasets_mixtures():
     data_mixture_5 = Dataset(
         dataset_name="human_eng",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_human_eng.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_human_eng.json',
     )
     add_dataset(data_mixture_5)
 
     data_mixture_6 = Dataset(
         dataset_name="human_ru",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_human_ru.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_human_ru.json',
     )
     add_dataset(data_mixture_6)
 
@@ -132,21 +132,21 @@ def register_datasets_mixtures():
     data_mixture_7 = Dataset(
         dataset_name="tts_ru",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_tts_ru.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_tts_ru.json',
     )
     add_dataset(data_mixture_7)
 
     data_mixture_8 = Dataset(
         dataset_name="tts_eng",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_tts_eng.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_tts_eng.json',
     )
     add_dataset(data_mixture_8)
 
     data_mixture_9 = Dataset(
         dataset_name="tts_multiling",
         dataset_type="torch",
-        data_path='/home/jovyan/shares/SR004.nfs2/skripkin/speech2latex/audio-flamingo/data/Speech2Latex_equations_train_audio_flamingo_3_tts_multiling.json',
+        data_path='Speech2Latex_equations_train_audio_flamingo_3_tts_multiling.json',
     )
     add_dataset(data_mixture_9)
 
