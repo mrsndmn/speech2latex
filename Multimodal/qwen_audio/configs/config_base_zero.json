@@ -1,0 +1,11 @@
+{
+    "exp_name": "qwen2-audio-7b-instruct",
+    "model_ckpt": "Qwen/Qwen2-Audio-7B-Instruct",
+    "n_epochs": 0,
+    "grad_accum": 1,
+    "learning_rate": 0.0,
+    "prompt": "This is a dialog with AI assistant.\n",
+    "num_workers": 8,
+    "batch_size": 8,
+    "ckp_iterations_step": 10000
+}

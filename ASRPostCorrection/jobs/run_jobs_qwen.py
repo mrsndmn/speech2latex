@@ -135,7 +135,7 @@ if __name__ == "__main__":
                         result = client.run_job(
                             payload={
                                 'script': command,
-                                'job_desc': f'S2L: {config_file.removesuffix(".json")} {dataset_split} lang={language} data={data_type} #{author_name} #rnd #multimodal @mrsndmn',
+                                'job_desc': f'S2L: {config_file.removesuffix(".json")} {dataset_split} lang={language} data={data_type} #{author_name} #rnd #multimodal  #notify_completed @mrsndmn',
                                 'env_variables': {
                                     'PYTHONPATH': './:../src:/workspace-SR004.nfs2/d.tarasov/ProcessLaTeXFormulaTools/:../TeXBLEU',
                                     'HF_HOME': '/workspace-SR004.nfs2/.cache/huggingface',

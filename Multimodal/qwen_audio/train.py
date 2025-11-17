@@ -183,8 +183,9 @@ if __name__ == "__main__":
         # lora_dropout=0.1,
         bias="none",
     )
-    model = get_peft_model(model, peft_config)
-    print("model", model)
+    if cfg.n_epochs != 0:
+        model = get_peft_model(model, peft_config)
+        print("model", model)
     # model = torch.compile(model, dynamic=True, )
 
     # print("Unfreese multi_modal_projector")
@@ -209,7 +210,9 @@ if __name__ == "__main__":
         enable_checkpointing=False,
         gradient_clip_val=1.0,
     )
-    trainer.fit(module)
+
+    if cfg.n_epochs != 0:
+        trainer.fit(module)
 
     # Evaluation
     test_dataset = datasets.load_dataset('marsianin500/Speech2Latex', split=f'{dataset_split}_test', num_proc=32)
