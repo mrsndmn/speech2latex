@@ -119,7 +119,7 @@ if __name__ == "__main__":
             r=cfg.lora_r,
             lora_alpha=cfg.lora_alpha,
             # target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "down_proj", "up_proj"],
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+            target_modules=cfg.target_modules,
         )
 
         model = get_peft_model(model, lora_config)
