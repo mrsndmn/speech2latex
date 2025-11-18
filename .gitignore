@@ -1,5 +1,8 @@
 __pycache__
 ckpts_old/
+ckpts_unnormalized/
+ckpts_lora_multilang
+ckpts_archive
 ckpts
 .ipynb_checkpoints/
 

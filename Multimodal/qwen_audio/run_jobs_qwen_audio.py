@@ -22,8 +22,8 @@ if __name__ == "__main__":
         # for dataset_split in ['sentences', 'equations']:
             # for latex_column_name in ['sentence', 'sentence_normalized']:
             for latex_column_name in ['sentence_normalized']:
-                for language in ['multilingual']:
-                # for language in ['ru']:
+                # for language in ['multilingual']:
+                for language in ['eng']:
                 # for language in ['eng', 'ru', 'multilingual']:
                     if dataset_split == 'sentences' and (language == 'ru' or language == 'multilingual'):
                         continue

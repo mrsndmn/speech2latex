@@ -168,7 +168,6 @@ if __name__ == "__main__":
 
     torch.manual_seed(1234)
 
-
     model = Qwen2AudioForConditionalGeneration.from_pretrained(cfg.model_ckpt, device_map="cpu", trust_remote_code=True, torch_dtype=torch.bfloat16)
 
     peft_config = LoraConfig(
@@ -178,9 +177,9 @@ if __name__ == "__main__":
         # exclude_modules=['audio_tower'],
         exclude_modules=r'.*audio_tower.*',
         inference_mode=False,
-        r=8,
-        lora_alpha=32,
-        # lora_dropout=0.1,
+        r=cfg.lora_rank,
+        lora_alpha=cfg.lora_alpha,
+        lora_dropout=0.1,
         bias="none",
     )
     if cfg.n_epochs != 0:
@@ -225,7 +224,7 @@ if __name__ == "__main__":
     test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
 
     if args.language != 'multilingual':
-        test_dataset = test_dataset.filter(lambda x: x['language'] == args.language)
+        test_dataset = test_dataset.filter(lambda x: x['language'] == 'eng')
 
     if args.few_test_samples is not None:
         test_dataset = test_dataset.select(range(args.few_test_samples))
