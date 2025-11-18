@@ -124,6 +124,15 @@ if __name__ == "__main__":
 
         model = get_peft_model(model, lora_config)
         print("model", model)
+    elif hasattr(cfg, 'unfreeze_head_and_last_layer') and cfg.unfreeze_head_and_last_layer:
+        for p in model.parameters():
+            p.requires_grad = False
+        for p in model.lm_head.parameters():
+            p.requires_grad = True
+        for p in model.model.layers[-2:].parameters():
+            p.requires_grad = True
+
+    print("Trainable params:", sum(p.numel() for p in model.parameters() if p.requires_grad))
 
     ### Work with data
     collate_function = get_collate_function(tokenizer, cfg.model_ckpt)
