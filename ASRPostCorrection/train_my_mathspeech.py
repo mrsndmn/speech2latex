@@ -12,9 +12,10 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 
-
 import random
 import string
+import json
+from s2l.eval import LatexInContextMetrics
 
 MAX_LENGTH1 = 540  # input (ASR text)
 MAX_LENGTH2 = 275  # corrected text (stage 1 target and stage 2 input)
@@ -406,7 +407,15 @@ def main() -> None:
 
         df_test["mathasr_pred_latex"] = predictions
 
-        # If ground-truth exists, report a simple exact-match accuracy
+        # Decide output CSV path
+        if args.test_output_csv:
+            out_csv = args.test_output_csv
+        else:
+            base, ext = os.path.splitext(args.test_csv_path)
+            out_csv = f"{base}_mathasr_preds.csv"
+        predictions_csv_path = os.path.join(output_path, out_csv)
+
+        # If ground-truth exists, report accuracy and compute in-context metrics
         if "latex_normalized" in df_test.columns:
             truths = df_test["latex_normalized"].astype(str).tolist()
             exact = sum(1 for p, t in zip(predictions, truths) if p.strip() == t.strip())
@@ -414,14 +423,39 @@ def main() -> None:
             acc = exact / total if total else 0.0
             print(f"Test exact-match accuracy: {acc:.4f} ({exact}/{total})")
 
+            metrics = LatexInContextMetrics()
+            # Mix/all
+            metrics_values_mix = metrics.compute_all(predictions, truths)
+            print("\nIn-context metrics (mix):")
+            metrics.dump(metrics_values_mix)
+            metrics_base, _ = os.path.splitext(predictions_csv_path)
+            with open(f"{metrics_base}_metrics_mix.json", "w") as f:
+                json.dump(metrics_values_mix, f)
+
+            # Splits by is_tts if available
+            if "is_tts" in df_test.columns:
+                df_artificial = df_test[df_test["is_tts"] == 1]
+                df_humans = df_test[df_test["is_tts"] == 0]
+                if len(df_artificial) > 0:
+                    preds_art = df_artificial["mathasr_pred_latex"].astype(str).tolist()
+                    truths_art = df_artificial["latex_normalized"].astype(str).tolist()
+                    metrics_values_art = metrics.compute_all(preds_art, truths_art)
+                    print("\nIn-context metrics (artificial):")
+                    metrics.dump(metrics_values_art)
+                    with open(f"{metrics_base}_metrics_artificial.json", "w") as f:
+                        json.dump(metrics_values_art, f)
+                if len(df_humans) > 0:
+                    preds_hum = df_humans["mathasr_pred_latex"].astype(str).tolist()
+                    truths_hum = df_humans["latex_normalized"].astype(str).tolist()
+                    metrics_values_hum = metrics.compute_all(preds_hum, truths_hum)
+                    print("\nIn-context metrics (humans):")
+                    metrics.dump(metrics_values_hum)
+                    with open(f"{metrics_base}_metrics_humans.json", "w") as f:
+                        json.dump(metrics_values_hum, f)
+
         # Save predictions CSV
-        if args.test_output_csv:
-            out_csv = args.test_output_csv
-        else:
-            base, ext = os.path.splitext(args.test_csv_path)
-            out_csv = f"{base}_mathasr_preds.csv"
-        df_test.to_csv(os.path.join(output_path, out_csv), index=False)
-        print(f"Saved test predictions to {out_csv}")
+        df_test.to_csv(predictions_csv_path, index=False)
+        print(f"Saved test predictions to {predictions_csv_path}")
 
 
 if __name__ == "__main__":
