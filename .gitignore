@@ -3,6 +3,7 @@ ckpts_old/
 ckpts_unnormalized/
 ckpts_lora_multilang
 ckpts_archive
+math_speech_ckpts
 ckpts
 .ipynb_checkpoints/
 

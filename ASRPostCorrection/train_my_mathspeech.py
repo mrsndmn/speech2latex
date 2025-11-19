@@ -13,6 +13,9 @@ from tqdm.auto import tqdm
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 
 
+import random
+import string
+
 MAX_LENGTH1 = 540  # input (ASR text)
 MAX_LENGTH2 = 275  # corrected text (stage 1 target and stage 2 input)
 MAX_LENGTH3 = 275  # LaTeX target (stage 2 target)
@@ -46,6 +49,81 @@ class MathASR(torch.nn.Module):
 
         total_loss = 0.3 * loss1 + 0.7 * loss2
         return total_loss, outputs1.logits, outputs2.logits
+
+    @torch.no_grad()
+    def translate_batch(
+        self,
+        asr_beam1,
+        asr_beam2,
+        max_length_input: int,
+        max_length_correct: int,
+        max_length_output: int,
+        num_beams: int = 5,
+    ):
+        """Translate a batch of ASR hypotheses into LaTeX.
+
+        Args:
+            asr_beam1 (List[str]): first ASR hypothesis per sample.
+            asr_beam2 (List[str]): second ASR hypothesis per sample.
+        Returns:
+            List[str]: LaTeX strings corresponding to each input sample.
+        """
+        assert len(asr_beam1) == len(asr_beam2)
+
+        # 1. Build encoder input strings
+        inputs_text = [
+            f"translate ASR to truth: {b1} || {b2}"
+            for b1, b2 in zip(asr_beam1, asr_beam2)
+        ]
+
+        # 2. Tokenise with *left* padding
+        batch_enc = self.tokenizer(
+            inputs_text,
+            return_tensors="pt",
+            padding="longest",
+            truncation=True,
+            max_length=max_length_input,
+        ).to(self.device)
+
+        # 3. Run error-corrector model
+        corrected_ids = self.model1.generate(
+            **batch_enc,
+            max_length=max_length_correct,
+            num_beams=num_beams,
+            early_stopping=True,
+        )
+
+        corrected_sentences = [
+            self.tokenizer.decode(ids[1:-1], skip_special_tokens=False).strip()
+            for ids in corrected_ids
+        ]
+
+        corrected_sentences = [c.replace("<pad>", "").replace("</s>", "") for c in corrected_sentences]
+
+        # 4. Tokenise corrected sentences
+        batch_enc2 = self.tokenizer(
+            corrected_sentences,
+            return_tensors="pt",
+            padding="longest",
+            truncation=True,
+            max_length=max_length_correct,
+        ).to(self.device)
+
+        # 5. Run translation model
+        latex_ids = self.model2.generate(
+            **batch_enc2,
+            max_length=max_length_output,
+            num_beams=num_beams,
+            early_stopping=True,
+        )
+
+        latex_outputs = [
+            self.tokenizer.decode(ids[1:-1], skip_special_tokens=False)
+            for ids in latex_ids
+        ]
+        latex_outputs = [c.replace("<pad>", "").replace("</s>", "") for c in latex_outputs]
+
+        return latex_outputs
 
 
 class MathSpeechDataset(Dataset):
@@ -188,8 +266,8 @@ def train(
                 writer.add_scalar("train/lr", optimizer.param_groups[0]["lr"], global_step)
             global_step += 1
 
-        if scheduler is not None:
-            scheduler.step()
+            if scheduler is not None:
+                scheduler.step()
 
         avg_loss = epoch_loss / max(1, len(dataloader))
         tqdm.write(f"Epoch {epoch} average loss: {avg_loss:.4f}")
@@ -212,14 +290,30 @@ def main() -> None:
     parser.add_argument("--max_input_len", type=int, default=MAX_LENGTH1)
     parser.add_argument("--max_correct_len", type=int, default=MAX_LENGTH2)
     parser.add_argument("--max_latex_len", type=int, default=MAX_LENGTH3)
-    parser.add_argument("--output_path", type=str, default="ASRPostCorrection/mathasr_checkpoint.pt")
+    parser.add_argument("--output_path", type=str, default="math_speech_ckpts")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--log_dir", type=str, default="runs/mathasr", help="TensorBoard log directory")
     parser.add_argument("--is_tts", type=int, nargs="+", choices=[0, 1], default=[0, 1], help="Filter by is_tts values (e.g., --is_tts 0 1)")
     parser.add_argument("--languages", type=str, nargs="+", choices=["ru", "eng"], default=["ru", "eng"], help="Filter by language values (e.g., --languages ru eng)")
+    # Test/evaluation arguments
+    parser.add_argument("--test_csv_path", type=str, default=None, help="Optional: path to CSV to evaluate after training")
+    parser.add_argument("--test_output_csv", type=str, default=None, help="Optional: where to save test predictions CSV")
+    parser.add_argument("--test_batch_size", type=int, default=64, help="Batch size for translate_batch during test")
+    parser.add_argument("--num_beams", type=int, default=5, help="Beam size for generation during test")
     args = parser.parse_args()
 
     set_seed(args.seed)
+
+    output_path_base = args.output_path
+    characters = string.ascii_letters + string.digits
+
+    while True:
+        random_string = ''.join(random.choice(characters) for i in range(6))
+        output_path = os.path.join(output_path_base, "run_" + random_string)
+        if not os.path.exists(output_path):
+            break
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    print("output dir", output_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -249,9 +343,9 @@ def main() -> None:
     model = MathASR(tokenizer=tokenizer, model_name1=model_corrector, model_name2=model_translator, device=device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=(len(dataset) // args.batch_size) * args.epochs)
 
-    writer = SummaryWriter(log_dir=args.log_dir)
+    writer = SummaryWriter(log_dir=output_path)
     train(
         model=model,
         dataloader=dataloader,
@@ -264,7 +358,7 @@ def main() -> None:
     )
     writer.close()
 
-    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
+    output_path_checkpoint = os.path.join(output_path, 'checkpoint.pt')
     torch.save(
         {
             "model1_state_dict": model.model1.state_dict(),
@@ -274,9 +368,60 @@ def main() -> None:
             "tokenizer_name_or_path": args.tokenizer_path,
             "args": vars(args),
         },
-        args.output_path,
+        output_path_checkpoint,
     )
-    print(f"Saved final checkpoint to {args.output_path}")
+    print(f"Saved final checkpoint to {output_path}")
+
+    # -------------------------------
+    # Optional test stage (inference)
+    # -------------------------------
+    if args.test_csv_path:
+        # Ensure evaluation mode and left padding for generation
+        model.eval()
+        tokenizer.padding_side = "left"
+
+        df_test = pd.read_csv(args.test_csv_path)
+
+        # Required ASR hypothesis columns
+        required_test_cols = ["whisper_small_text", "whisper_base_text"]
+        for col in required_test_cols:
+            if col not in df_test.columns:
+                raise ValueError(f"Required column '{col}' not found in test CSV {args.test_csv_path}")
+
+        beam_small = df_test["whisper_small_text"].astype(str).tolist()
+        beam_base = df_test["whisper_base_text"].astype(str).tolist()
+
+        predictions: list[str] = []
+        for start in tqdm(range(0, len(beam_small), args.test_batch_size), desc="Testing"):
+            end = min(start + args.test_batch_size, len(beam_small))
+            batch_preds = model.translate_batch(
+                beam_small[start:end],
+                beam_base[start:end],
+                max_length_input=args.max_input_len,
+                max_length_correct=args.max_correct_len,
+                max_length_output=args.max_latex_len,
+                num_beams=args.num_beams,
+            )
+            predictions.extend(batch_preds)
+
+        df_test["mathasr_pred_latex"] = predictions
+
+        # If ground-truth exists, report a simple exact-match accuracy
+        if "latex_normalized" in df_test.columns:
+            truths = df_test["latex_normalized"].astype(str).tolist()
+            exact = sum(1 for p, t in zip(predictions, truths) if p.strip() == t.strip())
+            total = len(predictions)
+            acc = exact / total if total else 0.0
+            print(f"Test exact-match accuracy: {acc:.4f} ({exact}/{total})")
+
+        # Save predictions CSV
+        if args.test_output_csv:
+            out_csv = args.test_output_csv
+        else:
+            base, ext = os.path.splitext(args.test_csv_path)
+            out_csv = f"{base}_mathasr_preds.csv"
+        df_test.to_csv(os.path.join(output_path, out_csv), index=False)
+        print(f"Saved test predictions to {out_csv}")
 
 
 if __name__ == "__main__":
