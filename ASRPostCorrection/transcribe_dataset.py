@@ -133,6 +133,8 @@ def main() -> None:
     collected_texts: Dict[str, List[str]] = {f"whisper_{m}_text": [] for m in args.models}
     latex: List[str] = []
     pronunciation: List[str] = []
+    is_tts: List[bool] = []
+    language_col: List[str] = []
 
     for item in tqdm(dataset, total=len(dataset)):
         # Prepare 16kHz mono float32 numpy audio for Whisper
@@ -149,6 +151,8 @@ def main() -> None:
 
         pronunciation.append(item["pronunciation"])
         latex.append(item["sentence"])
+        is_tts.append(item.get("is_tts"))
+        language_col.append(item.get("language"))
 
         # Inference (no grad)
         with torch.no_grad():
@@ -160,6 +164,8 @@ def main() -> None:
         **collected_texts,
         "latex": latex,
         "pronunciation": pronunciation,
+        "is_tts": is_tts,
+        "language": language_col,
     }
     df = pd.DataFrame.from_dict(data)
 
