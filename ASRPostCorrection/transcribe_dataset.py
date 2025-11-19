@@ -98,6 +98,10 @@ def main() -> None:
     device = resolve_device(args.device)
 
     dataset = datasets.load_dataset(args.dataset_path, split=args.split)
+    # Optional limit applied after sharding
+    if args.limit is not None and args.limit >= 0:
+        dataset = dataset.select(range(min(args.limit, len(dataset))))
+
     # Optional sharding across multiple processes/machines
     if args.shard_index is not None or args.num_shards is not None:
         if args.shard_index is None or args.num_shards is None:
@@ -109,9 +113,6 @@ def main() -> None:
         # Datasets API: shard(num_shards, index)
         dataset = dataset.shard(num_shards=args.num_shards, index=args.shard_index)
 
-    # Optional limit applied after sharding
-    if args.limit is not None and args.limit >= 0:
-        dataset = dataset.select(range(min(args.limit, len(dataset))))
 
     # Optional preprocessing to resample to 16kHz in parallel
     if args.preprocess_workers and args.preprocess_workers > 0:
