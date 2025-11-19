@@ -8,6 +8,7 @@ from typing import Dict
 import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 
@@ -55,6 +56,8 @@ class MathSpeechDataset(Dataset):
         max_input_len: int = MAX_LENGTH1,
         max_correct_len: int = MAX_LENGTH2,
         max_latex_len: int = MAX_LENGTH3,
+        is_tts_filter: list[int] | None = None,
+        language_filter: list[str] | None = None,
     ) -> None:
         self.tokenizer = tokenizer
         self.max_input_len = max_input_len
@@ -63,25 +66,36 @@ class MathSpeechDataset(Dataset):
 
         df = pd.read_csv(csv_path)
         # Ensure required columns exist
-        for col in ["pronunciation", "whisper_text", "sentence"]:
+        for col in ["pronunciation", "whisper_small_text", "whisper_base_text", "latex_normalized"]:
             if col not in df.columns:
                 raise ValueError(f"Required column '{col}' not found in {csv_path}")
+        # Optional filters if corresponding columns exist
+        if is_tts_filter is not None:
+            if "is_tts" not in df.columns:
+                raise ValueError("Requested is_tts filtering but 'is_tts' column not found in CSV")
+            df = df[df["is_tts"].isin(is_tts_filter)]
+        if language_filter is not None:
+            if "language" not in df.columns:
+                raise ValueError("Requested language filtering but 'language' column not found in CSV")
+            df = df[df["language"].isin(language_filter)]
         # Drop rows with missing values in required fields
-        df = df.dropna(subset=["pronunciation", "whisper_text", "sentence"]).reset_index(drop=True)
+        df = df.dropna(subset=["pronunciation", "whisper_small_text", "whisper_base_text", "latex_normalized"]).reset_index(drop=True)
         self.pronunciation = df["pronunciation"].astype(str).tolist()
-        self.asr_text = df["whisper_text"].astype(str).tolist()
-        self.latex = df["sentence"].astype(str).tolist()
+        self.asr_small_text = df["whisper_small_text"].astype(str).tolist()
+        self.asr_base_text = df["whisper_base_text"].astype(str).tolist()
+        self.latex = df["latex_normalized"].astype(str).tolist()
 
     def __len__(self) -> int:
-        return len(self.asr_text)
+        return len(self.latex)
 
     def __getitem__(self, idx: int) -> Dict[str, torch.Tensor]:
-        input_text = self.asr_text[idx]
+        input_small_text = self.asr_small_text[idx]
+        input_base_text = self.asr_base_text[idx]
         corrected_text = self.pronunciation[idx]
         latex_text = self.latex[idx]
 
         input_enc = self.tokenizer(
-            input_text,
+            f"translate ASR to truth: {input_small_text} || {input_base_text}",
             max_length=self.max_input_len,
             padding="max_length",
             truncation=True,
@@ -140,8 +154,10 @@ def train(
     device: torch.device,
     num_epochs: int,
     grad_clip: float | None = None,
+    writer: SummaryWriter | None = None,
 ) -> None:
     model.train()
+    global_step = 0
     for epoch in range(1, num_epochs + 1):
         epoch_loss = 0.0
         pbar = tqdm(dataloader, desc=f"Epoch {epoch}/{num_epochs}")
@@ -167,17 +183,24 @@ def train(
 
             epoch_loss += loss.item()
             pbar.set_postfix({"loss": f"{loss.item():.4f}", "lr": f"{optimizer.param_groups[0]['lr']:.2e}"})
+            if writer is not None:
+                writer.add_scalar("train/loss", loss.item(), global_step)
+                writer.add_scalar("train/lr", optimizer.param_groups[0]["lr"], global_step)
+            global_step += 1
 
         if scheduler is not None:
             scheduler.step()
 
         avg_loss = epoch_loss / max(1, len(dataloader))
         tqdm.write(f"Epoch {epoch} average loss: {avg_loss:.4f}")
+        if writer is not None:
+            writer.add_scalar("train/epoch_avg_loss", avg_loss, epoch)
+            writer.flush()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train MathASR (two-stage T5) with raw PyTorch")
-    parser.add_argument("--csv_path", type=str, default="./result_ASR.csv", help="Path to CSV with columns: whisper_text, pronunciation, sentence")
+    parser.add_argument("--csv_path", type=str, default="./result_ASR.csv", help="Path to CSV with columns: whisper_text, pronunciation, latex_normalized")
     parser.add_argument("--tokenizer_path", type=str, default="google-t5/t5-small", help="Tokenizer name or path")
     parser.add_argument("--corrector_model", type=str, default="google-t5/t5-small", help="Stage-1 (correction) T5 model name or path")
     parser.add_argument("--translator_model", type=str, default="google-t5/t5-small", help="Stage-2 (translation) T5 model name or path")
@@ -191,6 +214,9 @@ def main() -> None:
     parser.add_argument("--max_latex_len", type=int, default=MAX_LENGTH3)
     parser.add_argument("--output_path", type=str, default="ASRPostCorrection/mathasr_checkpoint.pt")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--log_dir", type=str, default="runs/mathasr", help="TensorBoard log directory")
+    parser.add_argument("--is_tts", type=int, nargs="+", choices=[0, 1], default=[0, 1], help="Filter by is_tts values (e.g., --is_tts 0 1)")
+    parser.add_argument("--languages", type=str, nargs="+", choices=["ru", "eng"], default=["ru", "eng"], help="Filter by language values (e.g., --languages ru eng)")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -213,7 +239,10 @@ def main() -> None:
         max_input_len=args.max_input_len,
         max_correct_len=args.max_correct_len,
         max_latex_len=args.max_latex_len,
+        is_tts_filter=args.is_tts,
+        language_filter=args.languages,
     )
+    tqdm.write(f"Training samples after filtering: {len(dataset)}")
 
     dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, drop_last=False)
 
@@ -222,6 +251,7 @@ def main() -> None:
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
+    writer = SummaryWriter(log_dir=args.log_dir)
     train(
         model=model,
         dataloader=dataloader,
@@ -230,7 +260,9 @@ def main() -> None:
         device=device,
         num_epochs=args.epochs,
         grad_clip=args.grad_clip,
+        writer=writer,
     )
+    writer.close()
 
     os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
     torch.save(
