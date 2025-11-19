@@ -94,6 +94,9 @@ def load_models(model_names: List[str], device: str) -> Dict[str, "whisper.Whisp
 
 
 def main() -> None:
+    import ssl
+    ssl._create_default_https_context = ssl._create_unverified_context
+
     args = parse_args()
     device = resolve_device(args.device)
 
