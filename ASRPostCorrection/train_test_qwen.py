@@ -213,6 +213,7 @@ if __name__ == "__main__":
     module.to('cuda')
 
     if args.language != 'multilingual':
+        # If there was no language in training split, it can't be processed
         test_dataset = test_dataset.filter(lambda x: x['language'] == args.language)
 
     if args.few_test_samples is not None:
