@@ -212,6 +212,7 @@ def build_s2l_equations_table(experiments):
                 'Qwen2.5-7B-instruct': 'Q-7B',
                 'Qwen2.5-7B-instruct-partial-unfreeze': 'Q-7B-pu',
                 'Qwen2.5-7B-instruct-r16a64': 'Q-7B-r16a64',
+                'Qwen2.5-7B-instruct-r8a32': 'Q-7B-r8a32',
                 'Qwen2-Audio-7B-instruct-LoRa-r16-a32-lr1e-4': 'QA-7B-r16a32',
                 'Qwen2-Audio-7B-instruct-LoRa-r16-a64-lr1e-4': 'QA-7B-r16a64',
                 'Qwen2-Audio-7B-instruct-LoRa-r8-a32-lr1e-4': 'QA-7B-r8a32',
@@ -259,7 +260,7 @@ def build_s2l_equations_table(experiments):
 
     # Sort by dataset_split, language, data_type
 
-    models_order = [ 'Q-0.5B', 'Q-1.5B', 'Q-math-1.5B', 'Q-7B', 'QA-7B', 'Q-7B-pu', 'Q-7B-r16a64', 'QA-7B-r16a32', 'QA-7B-r16a64', 'QA-7B-r8a32', 'QA-7B-r8a16']
+    models_order = [ 'Q-0.5B', 'Q-1.5B', 'Q-math-1.5B', 'Q-7B', 'QA-7B', 'Q-7B-pu', 'Q-7B-r16a64', 'Q-7B-r8a32', 'QA-7B-r16a32', 'QA-7B-r16a64', 'QA-7B-r8a32', 'QA-7B-r8a16']
     train_split_order = [ 'Mix-full', 'Mix', 'H', 'A', '-' ]
     languages_order = [ 'Eng+Ru', 'Eng', 'Ru', ]
 

@@ -127,7 +127,7 @@ def main() -> None:
                 audio_tensor = torchaudio.functional.resample(audio_tensor, sr, 16000)
                 example["audio_16k"] = audio_tensor.numpy()
             else:
-                example["audio_16k"] = array
+                example["audio_16k"] = array.astype("float32")
             return example
         dataset = dataset.map(_prep, num_proc=args.preprocess_workers)
 
@@ -143,11 +143,11 @@ def main() -> None:
     for item in tqdm(dataset, total=len(dataset)):
         # Prepare 16kHz mono float32 numpy audio for Whisper
         if args.preprocess_workers and "audio_16k" in item:
-            audio_np = item["audio_16k"]
+            audio_np = item["audio_16k"].astype("float32")
         else:
             sample_rate = item["audio_path"]["sampling_rate"]
             if sample_rate == 16000:
-                audio_np = item["audio_path"]["array"]
+                audio_np = item["audio_path"]["array"].astype("float32")
             else:
                 audio_tensor = torch.tensor(item["audio_path"]["array"], dtype=torch.float32)
                 audio_tensor = torchaudio.functional.resample(audio_tensor, sample_rate, 16000)
