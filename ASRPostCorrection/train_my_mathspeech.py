@@ -305,11 +305,35 @@ def main() -> None:
     set_seed(args.seed)
 
     output_path_base = args.output_path
+    # Derive run-descriptive tags for is_tts and language to embed into output dir
+    tts_values = set(args.is_tts or [0, 1])
+    if tts_values == {0, 1}:
+        tts_tag = "mix"
+    elif tts_values == {0}:
+        tts_tag = "human"
+    elif tts_values == {1}:
+        tts_tag = "artificial"
+    else:
+        raise ValueError("invalid tts values")
+
+    lang_values = set(args.languages or ["ru", "eng"])
+    if lang_values == {"ru", "eng"}:
+        lang_tag = "multilang"
+    elif lang_values == {"ru"}:
+        lang_tag = "ru"
+    elif lang_values == {"eng"}:
+        lang_tag = "eng"
+    else:
+        raise ValueError("invalid languages argument")
+
     characters = string.ascii_letters + string.digits
 
     while True:
         random_string = ''.join(random.choice(characters) for i in range(6))
-        output_path = os.path.join(output_path_base, "run_" + random_string)
+        output_path = os.path.join(
+            output_path_base,
+            f"run_{random_string}_tts-{tts_tag}_lang-{lang_tag}",
+        )
         if not os.path.exists(output_path):
             break
 
@@ -388,6 +412,19 @@ def main() -> None:
         for col in required_test_cols:
             if col not in df_test.columns:
                 raise ValueError(f"Required column '{col}' not found in test CSV {args.test_csv_path}")
+
+        # If training was non-multilingual, filter test by the same languages
+        train_langs = list(dict.fromkeys(args.languages)) if hasattr(args, "languages") and args.languages is not None else None
+        if train_langs:
+            is_multilingual_train = set(train_langs) == {"ru", "eng"}
+            if not is_multilingual_train:
+                if "language" in df_test.columns:
+                    before = len(df_test)
+                    df_test = df_test[df_test["language"].isin(train_langs)].reset_index(drop=True)
+                    after = len(df_test)
+                    print(f"Filtered test by languages {train_langs}: {before} -> {after}")
+                else:
+                    print("Warning: training used language filtering but test CSV lacks 'language' column; skipping test language filter.")
 
         beam_small = df_test["whisper_small_text"].astype(str).tolist()
         beam_base = df_test["whisper_base_text"].astype(str).tolist()
