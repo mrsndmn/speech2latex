@@ -154,7 +154,7 @@ def main() -> None:
                 audio_np = audio_tensor.numpy()
 
         pronunciation.append(item["pronunciation"])
-        latex.append(item["sentence"])
+        latex.append(item["sentence_normalized"])
         is_tts.append(item.get("is_tts"))
         language_col.append(item.get("language"))
 
@@ -166,7 +166,7 @@ def main() -> None:
 
     data = {
         **collected_texts,
-        "latex": latex,
+        "latex_normalized": latex,
         "pronunciation": pronunciation,
         "is_tts": is_tts,
         "language": language_col,
