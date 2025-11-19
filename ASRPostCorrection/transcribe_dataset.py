@@ -27,6 +27,18 @@ def parse_args() -> argparse.Namespace:
         help="Dataset split to use (default: equations_train)",
     )
     parser.add_argument(
+        "--shard-index",
+        type=int,
+        default=None,
+        help="Shard index (0-based). Use with --num-shards for dataset sharding.",
+    )
+    parser.add_argument(
+        "--num-shards",
+        type=int,
+        default=None,
+        help="Total number of shards. Use with --shard-index for dataset sharding.",
+    )
+    parser.add_argument(
         "--limit",
         type=int,
         default=10,
@@ -52,6 +64,12 @@ def parse_args() -> argparse.Namespace:
         default="auto",
         choices=["auto", "cpu", "cuda"],
         help='Device to use for inference (default: "auto")',
+    )
+    parser.add_argument(
+        "--preprocess-workers",
+        type=int,
+        default=0,
+        help="If >0, pre-resample audio to 16kHz using datasets.map with num_proc.",
     )
     parser.add_argument(
         "--output-file",
@@ -80,8 +98,34 @@ def main() -> None:
     device = resolve_device(args.device)
 
     dataset = datasets.load_dataset(args.dataset_path, split=args.split)
+    # Optional sharding across multiple processes/machines
+    if args.shard_index is not None or args.num_shards is not None:
+        if args.shard_index is None or args.num_shards is None:
+            raise ValueError("Both --shard-index and --num-shards must be provided for sharding.")
+        if args.num_shards <= 0:
+            raise ValueError("--num-shards must be > 0.")
+        if not (0 <= args.shard_index < args.num_shards):
+            raise ValueError("--shard-index must satisfy 0 <= shard_index < num_shards.")
+        # Datasets API: shard(num_shards, index)
+        dataset = dataset.shard(num_shards=args.num_shards, index=args.shard_index)
+
+    # Optional limit applied after sharding
     if args.limit is not None and args.limit >= 0:
         dataset = dataset.select(range(min(args.limit, len(dataset))))
+
+    # Optional preprocessing to resample to 16kHz in parallel
+    if args.preprocess_workers and args.preprocess_workers > 0:
+        def _prep(example):
+            array = example["audio_path"]["array"]
+            sr = example["audio_path"]["sampling_rate"]
+            if sr != 16000:
+                audio_tensor = torch.tensor(array, dtype=torch.float32)
+                audio_tensor = torchaudio.functional.resample(audio_tensor, sr, 16000)
+                example["audio_16k"] = audio_tensor.numpy()
+            else:
+                example["audio_16k"] = array
+            return example
+        dataset = dataset.map(_prep, num_proc=args.preprocess_workers)
 
     models = load_models(args.models, device=device)
 
@@ -90,23 +134,27 @@ def main() -> None:
     latex: List[str] = []
     pronunciation: List[str] = []
 
-    for item in tqdm(dataset):
-        # Always work on CPU tensor for torchaudio resample stability, then pass numpy to whisper
-        audio_tensor = torch.tensor(item["audio_path"]["array"], dtype=torch.float32, device="cpu")
-        sample_rate = item["audio_path"]["sampling_rate"]
+    for item in tqdm(dataset, total=len(dataset)):
+        # Prepare 16kHz mono float32 numpy audio for Whisper
+        if args.preprocess_workers and "audio_16k" in item:
+            audio_np = item["audio_16k"]
+        else:
+            sample_rate = item["audio_path"]["sampling_rate"]
+            if sample_rate == 16000:
+                audio_np = item["audio_path"]["array"]
+            else:
+                audio_tensor = torch.tensor(item["audio_path"]["array"], dtype=torch.float32)
+                audio_tensor = torchaudio.functional.resample(audio_tensor, sample_rate, 16000)
+                audio_np = audio_tensor.numpy()
 
         pronunciation.append(item["pronunciation"])
         latex.append(item["sentence"])
 
-        if sample_rate != 16000:
-            audio_tensor = torchaudio.functional.resample(audio_tensor, sample_rate, 16000)
-
-        # Whisper accepts torch or numpy; pass numpy array
-        audio_np = audio_tensor.numpy()
-
-        for model_name, model in models.items():
-            result = model.transcribe(audio_np, language=args.language, fp16=(device == "cuda"))
-            collected_texts[f"whisper_{model_name}_text"].append(result["text"])
+        # Inference (no grad)
+        with torch.no_grad():
+            for model_name, model in models.items():
+                result = model.transcribe(audio_np, language=args.language, fp16=(device == "cuda"))
+                collected_texts[f"whisper_{model_name}_text"].append(result["text"])
 
     data = {
         **collected_texts,
@@ -115,7 +163,13 @@ def main() -> None:
     }
     df = pd.DataFrame.from_dict(data)
 
-    output_file = args.output_file or f"{args.split}_whisper_small_base_transcriptions.csv"
+    if args.output_file:
+        output_file = args.output_file
+    else:
+        shard_suffix = ""
+        if args.shard_index is not None and args.num_shards is not None:
+            shard_suffix = f"_shard{args.shard_index}of{args.num_shards}"
+        output_file = f"{args.split}{shard_suffix}_whisper_small_base_transcriptions.csv"
     df.to_csv(output_file, index=False)
     print("saved to", output_file)
 
