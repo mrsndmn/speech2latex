@@ -98,6 +98,7 @@ if __name__ == "__main__":
     parser.add_argument('--test_equations_my_normalized', action='store_true')
     parser.add_argument('--test_equations_unnormalized', action='store_true')
     parser.add_argument('--test_sentences', action='store_true')
+    parser.add_argument('--balanced_sampling', action='store_true', help='Enable balanced RU/EN sampling for multilingual training')
     args = parser.parse_args()
 
 
@@ -185,8 +186,32 @@ if __name__ == "__main__":
     print("Train dataset size", len(train_dataset))
     print("Test dataset size", len(test_dataset))
 
+    # Prepare optional balanced RU/EN sampler for multilingual training
+    balanced_sampler = None
+    if args.balanced_sampling:
+        if args.language != 'multilingual':
+            print("Warning: --balanced_sampling is only applicable with --language multilingual; ignoring.")
+        else:
+            langs = train_dataset['language']
+            num_ru = sum(1 for l in langs if l == 'ru')
+            num_eng = sum(1 for l in langs if l == 'eng')
+            if num_ru > 0 and num_eng > 0:
+                # Inverse-frequency weights to balance classes
+                weights = [
+                    (1.0 / num_ru) if l == 'ru' else ((1.0 / num_eng) if l == 'eng' else 0.0)
+                    for l in langs
+                ]
+                balanced_sampler = torch.utils.data.WeightedRandomSampler(
+                    weights=weights,
+                    num_samples=len(langs),
+                    replacement=True,
+                )
+                print("Balanced RU/EN sampling enabled for training.")
+            else:
+                print("Warning: --balanced_sampling requested but both RU and ENG are not present; using default sampling.")
+
     train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
-    train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True)
+    train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True, sampler=balanced_sampler)
 
     module = Model_pl(cfg, len(train_loader), model, model_config, tokenizer)
 

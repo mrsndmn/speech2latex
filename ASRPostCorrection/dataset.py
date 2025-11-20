@@ -102,12 +102,17 @@ def get_dataloader(dataset: Dataset,
                    batch_size: int,
                    collate_fn: Callable,
                    num_workers: int,
-                   train: bool = False) -> DataLoader:
-    
-    return DataLoader(dataset=dataset, 
-                      batch_size=batch_size, 
-                      collate_fn=collate_fn, 
-                      num_workers=num_workers, 
-                      shuffle=train, 
-                      drop_last=train,
-                      pin_memory=True,)
+                   train: bool = False,
+                   sampler=None) -> DataLoader:
+    # If a sampler is provided, disable shuffle to satisfy DataLoader constraints
+    effective_shuffle = (train and sampler is None)
+    return DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        collate_fn=collate_fn,
+        num_workers=num_workers,
+        shuffle=effective_shuffle,
+        drop_last=train,
+        pin_memory=True,
+        sampler=sampler,
+    )
