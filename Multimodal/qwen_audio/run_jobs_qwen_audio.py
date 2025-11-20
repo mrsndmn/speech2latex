@@ -16,6 +16,12 @@ if __name__ == "__main__":
     author_name = 'd.tarasov'
 
     config_name_all = glob.glob("configs/config_base*.json")
+    # config_name_all = config_name_all[:1]
+    config_name_all = [
+        'configs/config_base_r8-a32-lr1e-4.json',
+        'configs/config_base_r16-a32-lr1e-4.json',
+        'configs/config_base_r16-a64-lr1e-4.json',
+    ]
 
     for config_name in config_name_all:
         for dataset_split in ['equations']:

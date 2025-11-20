@@ -280,9 +280,10 @@ def train(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train MathASR (two-stage T5) with raw PyTorch")
     parser.add_argument("--csv_path", type=str, default="./result_ASR.csv", help="Path to CSV with columns: whisper_text, pronunciation, latex_normalized")
-    parser.add_argument("--tokenizer_path", type=str, default="google-t5/t5-small", help="Tokenizer name or path")
+    parser.add_argument("--tokenizer_path", type=str, default="AAAI2025/MathSpeech_Ablation_Study_LaTeX_translator_T5_small", help="Tokenizer name or path")
     parser.add_argument("--corrector_model", type=str, default="google-t5/t5-small", help="Stage-1 (correction) T5 model name or path")
     parser.add_argument("--translator_model", type=str, default="google-t5/t5-small", help="Stage-2 (translation) T5 model name or path")
+    parser.add_argument("--math_speech_checkpoint", type=str, default=None)
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--lr", type=float, default=1e-4)
@@ -367,6 +368,9 @@ def main() -> None:
 
     model = MathASR(tokenizer=tokenizer, model_name1=model_corrector, model_name2=model_translator, device=device)
 
+    if args.math_speech_checkpoint is not None:
+        model.load_state_dict(torch.load(args.math_speech_checkpoint)) # Load model weights. You need to write the path where the weights are stored.
+
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=(len(dataset) // args.batch_size) * args.epochs)
 
@@ -445,16 +449,13 @@ def main() -> None:
         df_test["mathasr_pred_latex"] = predictions
 
         # Decide output CSV path
-        if args.test_output_csv:
-            out_csv = args.test_output_csv
-        else:
-            base, ext = os.path.splitext(args.test_csv_path)
-            out_csv = f"{base}_mathasr_preds.csv"
+        out_csv = "test_result.csv"
         predictions_csv_path = os.path.join(output_path, out_csv)
 
         # If ground-truth exists, report accuracy and compute in-context metrics
         if "latex_normalized" in df_test.columns:
             truths = df_test["latex_normalized"].astype(str).tolist()
+            predictions_no_spaces = [p.replace(' ', '') for p in predictions]
             exact = sum(1 for p, t in zip(predictions, truths) if p.strip() == t.strip())
             total = len(predictions)
             acc = exact / total if total else 0.0
@@ -469,6 +470,13 @@ def main() -> None:
             with open(f"{metrics_base}_metrics_mix.json", "w") as f:
                 json.dump(metrics_values_mix, f)
 
+            # Mix/all without spaces
+            metrics_values_mix_nospaces = metrics.compute_all(predictions_no_spaces, truths)
+            print("\nIn-context metrics without spaces (mix):")
+            metrics.dump(metrics_values_mix_nospaces)
+            with open(f"{metrics_base}_metrics_mix_nospaces.json", "w") as f:
+                json.dump(metrics_values_mix_nospaces, f)
+
             # Splits by is_tts if available
             if "is_tts" in df_test.columns:
                 df_artificial = df_test[df_test["is_tts"] == 1]
@@ -481,6 +489,13 @@ def main() -> None:
                     metrics.dump(metrics_values_art)
                     with open(f"{metrics_base}_metrics_artificial.json", "w") as f:
                         json.dump(metrics_values_art, f)
+                    # Artificial without spaces
+                    preds_art_nospaces = [p.replace(' ', '') for p in preds_art]
+                    metrics_values_art_nospaces = metrics.compute_all(preds_art_nospaces, truths_art)
+                    print("\nIn-context metrics without spaces (artificial):")
+                    metrics.dump(metrics_values_art_nospaces)
+                    with open(f"{metrics_base}_metrics_artificial_nospaces.json", "w") as f:
+                        json.dump(metrics_values_art_nospaces, f)
                 if len(df_humans) > 0:
                     preds_hum = df_humans["mathasr_pred_latex"].astype(str).tolist()
                     truths_hum = df_humans["latex_normalized"].astype(str).tolist()
@@ -489,6 +504,13 @@ def main() -> None:
                     metrics.dump(metrics_values_hum)
                     with open(f"{metrics_base}_metrics_humans.json", "w") as f:
                         json.dump(metrics_values_hum, f)
+                    # Humans without spaces
+                    preds_hum_nospaces = [p.replace(' ', '') for p in preds_hum]
+                    metrics_values_hum_nospaces = metrics.compute_all(preds_hum_nospaces, truths_hum)
+                    print("\nIn-context metrics without spaces (humans):")
+                    metrics.dump(metrics_values_hum_nospaces)
+                    with open(f"{metrics_base}_metrics_humans_nospaces.json", "w") as f:
+                        json.dump(metrics_values_hum_nospaces, f)
 
         # Save predictions CSV
         df_test.to_csv(predictions_csv_path, index=False)
