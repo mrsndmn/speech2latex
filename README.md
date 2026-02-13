@@ -1,124 +1,113 @@
-# Speech2Latex
+# Speech-to-LaTeX
 
-# ProcessLaTeXFormulaTools
+[![Paper](https://img.shields.io/badge/arXiv-2508.03542-b31b1b.svg)](https://arxiv.org/abs/2508.03542)
+[![Project page](https://img.shields.io/badge/Project%20Page-GitHub%20Pages-0969da.svg)](https://mrsndmn.github.io/speech2latex/)
 
-In `./ProcessLaTeXFormulaTools` there is code for latex normalization.
+Converting spoken mathematical expressions into LaTeX: models, datasets, and benchmarks for **S2L-equations** and **S2L-sentences** in English and Russian.
 
-And main python code `ProcessLaTeXFormulaTools/process_formula/normalize_formulas.py`
+**Paper:** [Speech-to-LaTeX: New Models and Datasets for Converting Spoken Equations and Sentences](https://arxiv.org/abs/2508.03542) (arXiv:2508.03542)
+
+**Project page (demos & samples):** [GitHub Pages](https://mrsndmn.github.io/speech2latex/) — enable in repo **Settings → Pages → Source: Deploy from branch → Branch: main (or master) → /docs**.
+
+---
+
+## Main contributions
+
+- **First large-scale open-source S2L dataset** — [Hugging Face: marsianin500/Speech2Latex](https://huggingface.co/datasets/marsianin500/Speech2Latex): spoken mathematical expressions and sentences (**S2L-sentences**, **S2L-equations**) in English and Russian; 66k human and 571k synthetic audio samples with diverse pronunciations and complexities.
+- **Multiple S2L methods** — ASR post-correction, few-shot prompting, and audio-LLM integration; strong performance and improvement over MathSpeech on several tasks.
+- **Reproducible evaluation** — Baselines, metrics, and analysis for future S2L research. Code: [github.com/dkorzh10/speech2latex](https://github.com/dkorzh10/speech2latex).
+
+---
+
+## Repository structure
+
+| Path | Description |
+|------|-------------|
+| `ProcessLaTeXFormulaTools/` | LaTeX formula normalization |
+| `ASRPostCorrection/` | ASR post-correction training and evaluation |
+| `Multimodal/` | Gemma and SALMONN for Speech2LaTeX |
+| `sample_datasets/` | Sample audio (equations & sentences, train/test) |
+
+---
+
+## ProcessLaTeXFormulaTools
+
+LaTeX normalization in `ProcessLaTeXFormulaTools/process_formula/normalize_formulas.py`:
 
 ```python
 from ProcessLaTeXFormulaTools.process_formula import NormalizeFormula
 
 norm = NormalizeFormula(check_node=False)
-
-print(norm(" \sum_i^n i ")) # [ '\\sum_{i}^{n}i' ]
+print(norm(" \sum_i^n i "))  # ['\\sum_{i}^{n}i']
 ```
 
+**Install:** `pip install -r ProcessLaTeXFormulaTools/requirements.txt` (from `ProcessLaTeXFormulaTools/`).
+
+---
 
 ## Gemma for Speech2LaTeX
-
-To run this code, create a copy of conda environment from `envs/multimodal/gemma_env.yml` file and activate it.
 
 ```shell
 conda env create -f envs/multimodal/gemma_env.yml
 conda activate gemma_s2l
 ```
 
-If you encounter problems with PyTorch installation, install it using the following command:
+If needed (PyTorch):
+
 ```shell
 pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 ```
 
-Open Gemma directory `Multimodal/Gemma`.
-This directory contains code for Gemma 3n fine-tuning for Speech2LaTeX task.
-
-Create `train.csv` and `test.csv` files with `audio_path` and `formula_normalized` columns.
-And run scripts:
+In `Multimodal/Gemma`: create `train.csv` and `test.csv` with `audio_path` and `formula_normalized`, then:
 
 ```shell
 python gemma_ft.py
 python gemma_inf.py
 ```
 
-Supports multi GPU training with `torchrun`:
-```shell
-torchrun --nproc_per_node="3" gemma_ft.py
-```
+Multi-GPU: `torchrun --nproc_per_node="3" gemma_ft.py`
+
+---
 
 ## SALMONN for Speech2LaTeX
-
-To run this code, create a copy of conda environment from `envs/multimodal/salmonn_env.yml` file and activate it.
 
 ```shell
 conda env create -f envs/multimodal/salmonn_env.yml
 conda activate salmonn_s2l
 ```
 
-If you encounter problems with PyTorch installation, install it using the following command:
-```shell
-pip install torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-```
+In `Multimodal/Salmonn/SALMONN`: download checkpoints (see `configs/config.yaml`), create CSV with `audio_path` and `formula_normalized`, then:
 
-Open SALMONN directory `Multimodal/Salmonn/SALMONN`.
-This directory contains code for SALMONN fine-tuning for Speech2LaTeX task.
-
-You need to download checkpoints for model from original SALMONN repository to the `checkpoints` folder.
-You can look at the example for names in `Multimodal/Salmonn/SALMONN/configs/config.yaml`.
-
-Create `train.csv` and `test.csv` files with `audio_path` and `formula_normalized` columns.
-Convert .csv to .json with `convert_csv_to_json_annot.py`
 ```shell
 python convert_csv_to_json_annot.py
-```
-
-You can run training with:
-```shell
 python train.py --cfg-path configs/config.yaml
 ```
-Or, if you want to run multi GPU training:
+
+Inference:
+
 ```shell
-torchrun \
-  --nproc_per_node=3 \
-  --master_port=29700 \
-  train.py \
-  --cfg-path configs/config.yaml
+python inference.py --cfg-path "./configs/decode_config.yaml" --test_table "test.csv"
 ```
 
-For ineference run:
-```shell
-python inference.py \
-  --cfg-path "./configs/decode_config.yaml" \
-  --test_table "test.csv"
-```
-
-## Install dependencies for formula normalization
-
-```
-pip install -r requirements.txt
-```
-
+---
 
 ## ASRPostCorrection
 
-### Training
+**Training:**
 
-```
+```shell
 cd ASRPostCorrection
-PYTHONPATH=. python -m pdb -c continue train_qwen.py --config ./config-qwen2.5-in_context_training.json --train_df ../Data/latex_in_context_tts/latex_in_context_tts_v2_train.csv --val_df ../Data/latex_in_context_tts/latex_in_context_tts_v2_test.csv
+PYTHONPATH=. python train_qwen.py --config ./config-qwen2.5-in_context_training.json --train_df ../Data/latex_in_context_tts/latex_in_context_tts_v2_train.csv --val_df ../Data/latex_in_context_tts/latex_in_context_tts_v2_test.csv
 ```
 
-### Testing trained model
+**Testing:**
 
-```
-cd ASRPostCorrection
+```shell
 python test_qwen.py --cuda 0 --test_file_csv ../Data/latex_in_context_tts/latex_in_context_tts_v2_test.csv --batch_size 20 --ckpt ./ckpts/tts-in-context/version_9/
 ```
 
-### Evaluation
+**Evaluation:**
 
-Its also possible to compute metrics from file without model.
-
-Example usage:
 ```python
 from s2l.eval import LatexInContextMetrics
 in_context_metrics = LatexInContextMetrics()
@@ -126,19 +115,45 @@ metrics_values = in_context_metrics.compute_all(outputs['latex_pred'], outputs['
 in_context_metrics.dump(metrics_values)
 ```
 
-Example CLI-usage:
-```
-python src/s2l/eval.py --csv-data ./Data/latex_in_context_tts/latex_in_context_tts_v2_train.csv --pred-column model_prediction --target-column target_text
+CLI: `python src/s2l/eval.py --csv-data <path> --pred-column model_prediction --target-column target_text`
+
+### Demo results for project page
+
+Run the Qwen checkpoint on repo sample audio and save JSON for the [project page](https://mrsndmn.github.io/speech2latex/) demo:
+
+```shell
+cd ASRPostCorrection
+PYTHONPATH=. python run_qwen_demo.py --ckpt /path/to/checkpoint --output ../docs/demo_results.json
 ```
 
-## Pronunciation generation
-To generate pronunciation with xTTS v2 model, you can create an environment with `envs/tts/tts_env.yml`
+Without `--samples_csv`: the script loads HuggingFace `marsianin500/Speech2Latex`, matches samples to `sample_datasets/`, runs Whisper on local wavs, then Qwen. With `--samples_csv`: use a CSV with columns `split`, `sample_id`, `whisper_transcription`, `reference_latex`. Commit `docs/demo_results.json` so the project page can show reference vs predicted LaTeX per sample.
+
+---
+
+## Pronunciation generation (xTTS v2)
+
 ```shell
 conda env create -f envs/tts/tts_env.yml
 conda activate tts_s2l
 ```
-Then create an .csv or .jsonl files with `id`, `pronunciation` and `language` columns.
-Set `path` and `output_dir` in `EngTTS/tts.py` and run the script:
+
+Create CSV/JSONL with `id`, `pronunciation`, `language`. Set `path` and `output_dir` in `EngTTS/tts.py`, then:
+
 ```shell
 python EngTTS/tts.py
+```
+
+---
+
+## Citation
+
+```bibtex
+@inproceedings{
+korzh2026speechtolatex,
+title={Speech-to-LaTeX: New Models and Datasets for Converting Spoken Equations and Sentences},
+author={Dmitrii Korzh and Dmitrii Tarasov and Artyom Iudin and Elvir Karimov and Matvey Skripkin and Nikita Kuzmin and Andrey Kuznetsov and Oleg Rogov and Ivan Oseledets},
+booktitle={The Fourteenth International Conference on Learning Representations},
+year={2026},
+url={https://openreview.net/forum?id=gk8WMxzIQP}
+}
 ```
