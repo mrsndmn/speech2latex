@@ -62,17 +62,30 @@ def _ensure_latex_with_dollars(s: str, is_equation: bool) -> str:
     return s
 
 
-def build_manifest_from_hf(samples_dir: str, dataset_name: str = "marsianin500/Speech2Latex") -> pd.DataFrame:
-    """Load HF dataset per split, match samples by (is_tts, language) order, run Whisper on local wavs."""
+def _manifest_cache_path(samples_dir: str, dataset_name: str) -> str:
+    """Default cache path for build_manifest_from_hf (parent of samples_dir, dataset in filename)."""
+    safe_name = dataset_name.replace("/", "_")
+    return os.path.join(os.path.dirname(samples_dir), f".demo_manifest_cache_{safe_name}.csv")
+
+
+def build_manifest_from_hf(samples_dir: str, dataset_name: str = "marsianin500/Speech2Latex", cache_path: str | None = None, use_cache: bool = True) -> pd.DataFrame:
+    """Load HF dataset per split, match samples by (is_tts, language) order, run Whisper on local wavs. Uses CSV cache if present."""
+    if cache_path is None:
+        cache_path = _manifest_cache_path(samples_dir, dataset_name)
+    if use_cache and os.path.isfile(cache_path):
+        print(f"Loading manifest from cache: {cache_path}")
+        return pd.read_csv(cache_path)
+
     import torchaudio
     import datasets
     import whisper
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print("device", device)
     whisper_model = whisper.load_model("base", device=device)
 
     rows = []
-    for split, sample_ids in SAMPLE_IDS.items():
+    for split, sample_ids in tqdm(SAMPLE_IDS.items(), desc="Loading dataset"):
         ds = datasets.load_dataset(dataset_name, split=split, num_proc=16)
         # Order: (is_tts=False, eng), (False, ru), (True, eng), (True, ru) for equations;
         # (False, eng), (True, eng) for sentences
@@ -99,7 +112,7 @@ def build_manifest_from_hf(samples_dir: str, dataset_name: str = "marsianin500/S
         if len(selected) != len(sample_ids):
             raise ValueError(f"Split {split}: found {len(selected)} matching rows, need {len(sample_ids)}")
 
-        for idx, sample_id in zip(selected, sample_ids):
+        for idx, sample_id in tqdm(zip(selected, sample_ids), desc="Processing samples", total=len(selected)):
             ex = ds[idx]
             ref = ex.get("sentence_normalized") or ex.get("sentence") or ""
             ref = _ensure_latex_with_dollars(ref, is_equation)
@@ -123,7 +136,10 @@ def build_manifest_from_hf(samples_dir: str, dataset_name: str = "marsianin500/S
                 "whisper_transcription": whisper_text,
                 "reference_latex": ref,
             })
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    df.to_csv(cache_path, index=False)
+    print(f"Saved manifest cache: {cache_path}")
+    return df
 
 
 def main():
@@ -134,6 +150,8 @@ def main():
                         help="Optional CSV with columns: split, sample_id, whisper_transcription, reference_latex")
     parser.add_argument("--samples_dir", type=str, default=None,
                         help="Root dir containing sample_datasets/ (default: repo root = parent of ASRPostCorrection)")
+    parser.add_argument("--no_cache_manifest", action="store_true",
+                        help="Ignore cached manifest and rebuild from HuggingFace + Whisper")
     parser.add_argument("--cuda", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=8)
     args = parser.parse_args()
@@ -149,31 +167,41 @@ def main():
                 sys.exit(f"CSV must have column: {col}")
     else:
         print("Building manifest from HuggingFace + Whisper on local wavs...")
-        df = build_manifest_from_hf(samples_dir)
+        df = build_manifest_from_hf(samples_dir, use_cache=not args.no_cache_manifest)
         print(f"Got {len(df)} samples")
     df = df.fillna({"whisper_transcription": "", "reference_latex": ""})
 
     torch.set_default_dtype(torch.bfloat16)
     ckpt_path = args.ckpt
     tokenizer = AutoTokenizer.from_pretrained(os.path.join(ckpt_path, "tokenizer"))
-    try:
-        model = AutoModelForCausalLM.from_pretrained(
-            os.path.join(ckpt_path, "tuned-model"),
-            attn_implementation="flash_attention_2",
-            torch_dtype=torch.bfloat16,
-        ).to(device)
-    except (ValueError, Exception):
+
+    use_flash = "cuda" in device and torch.cuda.is_available()
+    if use_flash:
+        try:
+            model = AutoModelForCausalLM.from_pretrained(
+                os.path.join(ckpt_path, "tuned-model"),
+                attn_implementation="flash_attention_2",
+                torch_dtype=torch.bfloat16,
+            )
+            model = model.to(device)
+        except (ValueError, Exception):
+            model = AutoModelForCausalLM.from_pretrained(
+                os.path.join(ckpt_path, "tuned-model"),
+                torch_dtype=torch.bfloat16,
+            ).to(device)
+    else:
         model = AutoModelForCausalLM.from_pretrained(
             os.path.join(ckpt_path, "tuned-model"),
             torch_dtype=torch.bfloat16,
         ).to(device)
     model.eval()
 
-    # Use same column names as test_qwen for non-MathSpeech
+    # ASRDataset expects list-like indexing (dataset[i] = row); DataFrame[i] is column access.
+    records = df.to_dict("records")
     pron_col = "whisper_transcription"
     latex_col = "reference_latex"
-    dataset = ASRDataset(df, pron_column_name=pron_col, latex_column_name=latex_col)
-    collate_fn = get_collate_function(tokenizer, ckpt_path, process_formulas=None, latex_column=latex_col, whisper_column=pron_col)
+    dataset = ASRDataset(records, pron_column_name=pron_col, latex_column_name=latex_col)
+    collate_fn = get_collate_function(tokenizer, ckpt_path, process_formulas=None, latex_column="latex", whisper_column="pron")
     loader = get_dataloader(dataset, args.batch_size, collate_fn, num_workers=0, train=False)
 
     predictions = []
