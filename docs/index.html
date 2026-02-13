@@ -9,14 +9,14 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0f1419;
-      --surface: #1a2332;
-      --border: #2d3a4d;
-      --text: #e6edf3;
-      --muted: #8b9cb8;
-      --accent: #58a6ff;
-      --accent-soft: rgba(88, 166, 255, 0.15);
-      --math: #7ee787;
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --muted: #656d76;
+      --accent: #0969da;
+      --accent-soft: rgba(9, 105, 218, 0.1);
+      --math: #1a7f37;
       --serif: 'DM Serif Display', Georgia, serif;
       --sans: 'Outfit', system-ui, sans-serif;
       --mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -213,6 +213,7 @@
       padding: 0.5rem;
       background: var(--bg);
       border-radius: 4px;
+      color: var(--text);
     }
 
     .demo-results .katex-display {
@@ -303,8 +304,21 @@
       </div>
     </div>
 
+    <h2>Citation</h2>
+    <p class="subtitle">If you use this work, please cite:</p>
+    <div class="contributions" style="margin-top: 0.5rem;">
+      <p style="margin: 0 0 0.5rem;">Korzh et al., <strong>Speech-to-LaTeX: New Models and Datasets for Converting Spoken Equations and Sentences</strong>, ICLR 2026. <a href="https://openreview.net/forum?id=gk8WMxzIQP" target="_blank" rel="noopener">OpenReview</a> · <a href="https://arxiv.org/abs/2508.03542" target="_blank" rel="noopener">arXiv:2508.03542</a></p>
+      <pre style="margin: 0; font-size: 0.8rem; overflow-x: auto; white-space: pre; color: var(--text); background: var(--bg); padding: 0.75rem; border-radius: 6px;">@inproceedings{korzh2026speechtolatex,
+  title={Speech-to-LaTeX: New Models and Datasets for Converting Spoken Equations and Sentences},
+  author={Korzh, Dmitrii and Tarasov, Dmitrii and Iudin, Artyom and Karimov, Elvir and Skripkin, Matvey and Kuzmin, Nikita and Kuznetsov, Andrey and Rogov, Oleg and Oseledets, Ivan},
+  booktitle={The Fourteenth International Conference on Learning Representations},
+  year={2026},
+  url={https://openreview.net/forum?id=gk8WMxzIQP}
+}</pre>
+    </div>
+
     <footer>
-      <a href="https://arxiv.org/abs/2508.03542">Korzh et al., Speech-to-LaTeX: New Models and Datasets for Converting Spoken Equations and Sentences, arXiv:2508.03542, 2025</a>.
+      <a href="https://openreview.net/forum?id=gk8WMxzIQP">Korzh et al., Speech-to-LaTeX, ICLR 2026</a>.
     </footer>
   </div>
 
