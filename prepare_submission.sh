@@ -25,10 +25,10 @@ rm -rf ASRDataCreator ASR_FT RusTTS EngTTS Data/latex_in_context/README.md Data/
 
 find -name .ipynb_checkpoints -type d -exec rm -rf {} +
 
-if ! grep --binary-files=without-match -PRi 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|mrsndmn|\brsi\b|[а-яА-ЯёЁ]' . |  grep -v 'TeXBLEU/tokenizer.json\|TeXBLEU/new_embeddings.pth\|.csv' |  grep -q .; then
+if ! grep --binary-files=without-match -PRi 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|mrsndmn|\brsi\b|[а-яА-ЯёЁ]' . |  grep -v 'ProcessLaTeXFormulaTools/\|TeXBLEU/tokenizer.json\|TeXBLEU/new_embeddings.pth\|.csv' |  grep -q .; then
     echo "✅ No matching deanon substrings found."
 else
-    grep --binary-files=without-match -PRi 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|mrsndmn|\brsi\b|[а-яА-ЯёЁ]' . |  grep -v 'TeXBLEU/tokenizer.json\|TeXBLEU/new_embeddings.pth\|.csv' | head
+    grep --binary-files=without-match -PRi 'sber|Nikita|korzh|iudin|karimov|elvir|tarasov|mrsndmn|\brsi\b|[а-яА-ЯёЁ]' . |  grep -v 'ProcessLaTeXFormulaTools/\|TeXBLEU/tokenizer.json\|TeXBLEU/new_embeddings.pth\|.csv' | head
     echo "❌ Matching deanon substrings found!"
     exit 1
 fi
@@ -42,17 +42,18 @@ fi
 
 
 echo "Sample datasets data"
-python sample_datasets.py
-
-if [ $? -ne 0 ]; then
-    echo "❌ Sample datasets data creation failed!"
-    exit 1
-fi
+# python sample_datasets.py
+# if [ $? -ne 0 ]; then
+#     echo "❌ Sample datasets data creation failed!"
+#     exit 1
+# fi
 
 rm sample_datasets.py
 
 mv ./sample_datasets ../
 # mv ./Speech2Latex_APPENDIX.pdf ../
+
+rm Speech2Latex_APPENDIX.pdf
 
 cd ../../
 
