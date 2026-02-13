@@ -436,8 +436,8 @@ def main():
     # experiments = []
     qwen_audio_experiments = [
         '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r8-a32-lr1e-4',
-        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-lr1e-4',
-        '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r8-a16-lr1e-4',
+        # '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a32-lr1e-4',
+        # '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r8-a16-lr1e-4',
         '../Multimodal/qwen_audio/ckpts/qwen2-audio-7b-instruct-lora-r16-a64-lr1e-4',
     ]
     # qwen_audio_experiments = []

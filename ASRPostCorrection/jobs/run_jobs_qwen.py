@@ -23,6 +23,10 @@ if __name__ == "__main__":
                         help="Language(s) to run: eng,ru,multilingual. Multiple flags or comma-separated.")
     parser.add_argument("--data-type", "--data_type", dest="data_types", action="append", default=None,
                         help="Data type(s) to run: human,synthetic_small,mix,mix_full. Multiple flags or comma-separated.")
+    parser.add_argument("--balanced-sampling", "--balanced_sampling", dest="balanced_sampling", action="store_true",
+                        help="Enable balanced RU/EN sampling when training with language=multilingual")
+    parser.add_argument("--transcribation_column_name", default=None)
+
     args, _unknown = parser.parse_known_args()
 
     # Backward compatibility with positional 'dry'
@@ -110,14 +114,17 @@ if __name__ == "__main__":
             for latex_column_name in latex_column_names_iter:
                 for language in languages_iter:
                     if dataset_split == 'sentences' and (language == 'ru' or language == 'multilingual'):
+                        # print("skip 1")
                         continue
 
                     for data_type in data_types_iter:
 
                         if data_type == 'mix_full':
                             if dataset_split != 'equations':
+                                # print("skip non eq")
                                 continue
                             if language != 'multilingual':
+                                # print("skip non ml")
                                 continue
 
                         command = (
@@ -128,6 +135,12 @@ if __name__ == "__main__":
                             f"--data_type {data_type} "
                             f"--config \"{config_path}\""
                         )
+                        if args.balanced_sampling:
+                            command += " --balanced_sampling"
+
+                        if args.transcribation_column_name:
+                            command += f" --transcribation_column_name {args.transcribation_column_name}"
+
                         print("\n\n", command)
                         if dry_run:
                             continue

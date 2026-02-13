@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # config_name_all = config_name_all[:1]
     config_name_all = [
         'configs/config_base_r8-a32-lr1e-4.json',
-        'configs/config_base_r16-a32-lr1e-4.json',
+        # 'configs/config_base_r16-a32-lr1e-4.json',
         'configs/config_base_r16-a64-lr1e-4.json',
     ]
 
@@ -27,7 +27,8 @@ if __name__ == "__main__":
         for dataset_split in ['equations']:
         # for dataset_split in ['sentences', 'equations']:
             # for latex_column_name in ['sentence', 'sentence_normalized']:
-            for latex_column_name in ['sentence_normalized']:
+            # for latex_column_name in ['sentence_normalized']:
+            for latex_column_name in ['sentence']:
                 # for language in ['multilingual']:
                 for language in ['eng']:
                 # for language in ['eng', 'ru', 'multilingual']:

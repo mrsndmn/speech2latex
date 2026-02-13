@@ -43,6 +43,7 @@ def test(
         model_name,
         pron_column_name = 'whisper_text',
         latex_column_name = 'sentence',
+        transcribation_column_name = None,
     ):
 
     DEVICE='cuda'
@@ -56,7 +57,7 @@ def test(
 
     outputs = defaultdict(list)
 
-    test_dataset = ASRDataset(test_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
+    test_dataset = ASRDataset(test_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name, transcribation_column_name=args.transcribation_column_name)
 
     # formulas normalization will be performed in batched_model_generation
     collate_function = get_collate_function(tokenizer, model_name, process_formulas=None)
@@ -68,7 +69,15 @@ def test(
 
         generated_latex = batched_model_generation(model, tokenizer, batch, device=DEVICE)
 
-        predicted_text = generated_latex['predicted_text']
+        predicted_text = []
+        if transcribation_column_name is None:
+            predicted_text = generated_latex['predicted_text']
+        else:
+            for item in generated_latex['predicted_text']:
+                item_split = item.split('LaTex: ')
+                latex_only = item_split[-1]
+                predicted_text.append(latex_only)
+
         target_text = generated_latex['target_text']
 
         outputs['latex_pred'].extend(predicted_text)
@@ -88,6 +97,7 @@ if __name__ == "__main__":
     parser.add_argument('--config', type=str, default='./config-4.json')
     parser.add_argument('--dataset_split', required=True, choices=['sentences', 'equations'])
     parser.add_argument('--latex_column_name', required=True, choices=['sentence', 'sentence_normalized'])
+    parser.add_argument('--transcribation_column_name', default=None)
     parser.add_argument('--language', required=True, choices=['eng', 'ru', 'multilingual'])
     parser.add_argument('--data_type', required=True, choices=['human', 'synthetic_small', 'synthetic_full', 'mix', 'mix_full'])
 
@@ -148,6 +158,8 @@ if __name__ == "__main__":
     latex_column_name = args.latex_column_name
 
     columns_to_keep = {pron_column_name, latex_column_name, 'is_tts', 'language'}
+    if args.transcribation_column_name is not None:
+        columns_to_keep.add(args.transcribation_column_name)
 
     train_dataset = train_dataset.remove_columns(set(train_dataset.column_names) - columns_to_keep)
     test_dataset = test_dataset.remove_columns(set(test_dataset.column_names) - columns_to_keep)
@@ -210,7 +222,7 @@ if __name__ == "__main__":
             else:
                 print("Warning: --balanced_sampling requested but both RU and ENG are not present; using default sampling.")
 
-    train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name)
+    train_dataset = ASRDataset(train_dataset, pron_column_name=pron_column_name, latex_column_name=latex_column_name, transcribation_column_name=args.transcribation_column_name)
     train_loader = get_dataloader(train_dataset, cfg.batch_size, collate_function, cfg.num_workers, train=True, sampler=balanced_sampler)
 
     module = Model_pl(cfg, len(train_loader), model, model_config, tokenizer)
