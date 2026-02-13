@@ -144,6 +144,22 @@ python upload_ckpts_to_hf.py [--ckpts_dir ./ckpts] [--dry_run]
 
 See `upload_ckpts_to_hf.py` for the list of models (0.5B, 1.5B, math-1.5B, 7B LoRA). Repo IDs: `marsianin500/<base>-<variant>`.
 
+### ASR post-correction models on Hugging Face
+
+Pre-trained checkpoints (use in Colab demo or load with `transformers`):
+
+| Model | Hugging Face |
+|-------|--------------|
+| Qwen2.5-0.5B (equations, multilingual mix) | [marsianin500/Qwen2.5-0.5B-instruct-equations_multilingual_mix](https://huggingface.co/marsianin500/Qwen2.5-0.5B-instruct-equations_multilingual_mix) |
+| Qwen2.5-0.5B (equations, multilingual mix full) | [marsianin500/Qwen2.5-0.5B-instruct-equations_multilingual_mix_full](https://huggingface.co/marsianin500/Qwen2.5-0.5B-instruct-equations_multilingual_mix_full) |
+| Qwen2.5-0.5B (sentences, eng mix) | [marsianin500/Qwen2.5-0.5B-instruct-sentences_eng_mix](https://huggingface.co/marsianin500/Qwen2.5-0.5B-instruct-sentences_eng_mix) |
+| Qwen2.5-1.5B (equations, multilingual mix) | [marsianin500/Qwen2.5-1.5B-instruct-equations_multilingual_mix](https://huggingface.co/marsianin500/Qwen2.5-1.5B-instruct-equations_multilingual_mix) |
+| Qwen2.5-math-1.5B (equations, multilingual mix full) | [marsianin500/Qwen2.5-math-1.5B-instruct-equations_multilingual_mix_full](https://huggingface.co/marsianin500/Qwen2.5-math-1.5B-instruct-equations_multilingual_mix_full) |
+| Qwen2.5-math-1.5B (equations, multilingual mix) | [marsianin500/Qwen2.5-math-1.5B-instruct-equations_multilingual_mix](https://huggingface.co/marsianin500/Qwen2.5-math-1.5B-instruct-equations_multilingual_mix) |
+| Qwen2.5-math-1.5B (sentences, eng mix) | [marsianin500/Qwen2.5-math-1.5B-instruct-sentences_eng_mix](https://huggingface.co/marsianin500/Qwen2.5-math-1.5B-instruct-sentences_eng_mix) |
+| Qwen2.5-7B LoRA (equations, multilingual mix) | [marsianin500/Qwen2.5-7B-instruct-r16a64-equations_multilingual_mix](https://huggingface.co/marsianin500/Qwen2.5-7B-instruct-r16a64-equations_multilingual_mix) |
+| Qwen2.5-7B LoRA (equations, multilingual mix full) | [marsianin500/Qwen2.5-7B-instruct-r16a64-equations_multilingual_mix_full](https://huggingface.co/marsianin500/Qwen2.5-7B-instruct-r16a64-equations_multilingual_mix_full) |
+
 ---
 
 ## Pronunciation generation (xTTS v2)
